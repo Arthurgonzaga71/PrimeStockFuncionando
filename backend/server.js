@@ -1,4 +1,4 @@
-// 📁 backend/server.js - VERSÃO CORRIGIDA E TESTADA
+// 📁 backend/server.js - VERSÃO COMPLETAMENTE CORRIGIDA E FUNCIONAL
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -58,27 +58,50 @@ const qrCodeRoutes = require('./src/routes/qrCodeRoutes');
 const exportRoutes = require('./src/routes/exportRoutes');
 const backupRoutes = require('./src/routes/backupRoutes');
 const solicitacaoRoutes = require('./src/routes/solicitacaoRoutes');
+const modeloEquipamentoRoutes = require('./src/routes/modeloEquipamentoRoutes');
 
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
+// 🛠️ CORREÇÃO: CORS Expandido
 const corsOptions = {
   origin: [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://127.0.0.1:3000',
-    'http://192.168.205.141:3000', // seu IP local
-    'http://192.168.205.141:3001', // se frontend rodar na rede
-    'http://localhost:3001'
+    'http://127.0.0.1:3001',
+    'http://192.168.205.141:3000',
+    'http://192.168.205.141:3001',
+    'http://localhost:5173', // Vite dev server
+    'http://127.0.0.1:5173',
+    'http://192.168.205.141:5173',
   ],
-  methods: ['GET','POST','PUT','DELETE','PATCH','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Auth-Token'],
+  exposedHeaders: ['Content-Disposition', 'Content-Length', 'X-Total-Count'],
   credentials: true,
+  maxAge: 86400, // 24 horas
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+
+// 🛠️ CORREÇÃO: Headers adicionais
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token');
+  next();
+});
+
+// Handle preflight
+app.options('*', cors(corsOptions));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/exports', express.static(path.join(__dirname, 'exports')));
@@ -94,7 +117,8 @@ app.use((req, res, next) => {
     console.log(`📦 Body:`, req.body ? JSON.stringify(req.body).substring(0, 200) : 'Sem body');
     console.log(`👤 Headers:`, {
       authorization: req.headers.authorization ? 'Token presente' : 'Sem token',
-      'content-type': req.headers['content-type']
+      'content-type': req.headers['content-type'],
+      origin: req.headers.origin
     });
   }
   
@@ -362,7 +386,7 @@ try {
   console.error('❌ ERRO ao registrar rota de solicitações:', error.message);
 }
 
-app.use('/api/modelos-equipamentos', require('./src/routes/modeloEquipamentoRoutes'));
+app.use('/api/modelos-equipamentos', modeloEquipamentoRoutes);
 console.log('✅ Rota: /api/modelos-equipamentos');
 
 console.log('\n✅ Todas as rotas registradas com sucesso!');

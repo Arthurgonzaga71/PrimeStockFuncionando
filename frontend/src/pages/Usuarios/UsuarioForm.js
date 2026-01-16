@@ -428,18 +428,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="form-info">
-          <h4>ℹ️ Informações do Sistema:</h4>
-          <ul>
-            <li><strong>Usuário Logado:</strong> {user?.nome} ({user?.perfil})</li>
-            <li><strong>Status:</strong> {formData.ativo ? '✅ Ativo' : '❌ Inativo'}</li>
-            <li><strong>Privilégios:</strong> Baseados no perfil atribuído</li>
-            <li><strong>Senha padrão para teste:</strong> 123456</li>
-            <li><strong>Perfis que você pode criar:</strong> {
-              perfisPermitidos.map(p => p.value).join(', ') || 'Nenhum'
-            }</li>
-          </ul>
-        </div>
+        
 
         <div className="form-actions">
           <button

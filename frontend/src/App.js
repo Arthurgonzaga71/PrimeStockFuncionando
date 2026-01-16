@@ -1,6 +1,5 @@
 // ============================================================================
-// App.js - VERSÃO DEFINITIVA CORRIGIDA
-// TODOS OS IMPORTS DEVEM VIR NO TOPO, ANTES DE QUALQUER CÓDIGO
+// App.js - VERSÃO DEFINITIVA COMPLETA COM ISOLAÇÃO DE ESTILOS
 // ============================================================================
 
 // REACT & ROUTER IMPORTS
@@ -14,7 +13,6 @@ import { EquipeProvider } from './contexts/EquipeContext';
 
 // COMPONENTS IMPORTS
 import { Navbar } from './components/UI/Layout';
-import PrivateRoute from './components/PrivateRoute';
 
 // PAGES IMPORTS (Não lazy - usados diretamente)
 import DashboardAprovacao from './pages/Dashboard/DashboardAprovacao';
@@ -25,6 +23,7 @@ import ConsultaCadastroRapido from './pages/ConsultaCadastroRapido';
 import EstoqueBaixo from './pages/EstoqueBaixo';
 
 // STYLES
+import './styles/reset.css';
 import './App.css';
 
 // ============================================================================
@@ -64,7 +63,7 @@ const UsuarioForm = lazy(() => import('./pages/Usuarios/UsuarioForm'));
 // 👥 MINHA EQUIPE
 const MinhaEquipe = lazy(() => import('./pages/MinhaEquipe/MinhaEquipe'));
 
-// 📋 SOLICITAÇÕES (Incluindo SolicitacoesParaEstoque)
+// 📋 SOLICITAÇÕES
 const SolicitacoesParaEstoque = lazy(() => import('./pages/Solicitacoes/SolicitacoesParaEstoque'));
 const ListaSolicitacoes = lazy(() => import('./pages/Solicitacoes/ListaSolicitacoes'));
 const NovaSolicitacao = lazy(() => import('./pages/Solicitacoes/NovaSolicitacao'));
@@ -82,23 +81,76 @@ const ExportPage = lazy(() => import('./pages/ExportPage'));
 const BackupPage = lazy(() => import('./pages/BackupPage'));
 
 // ============================================================================
-// COMPONENTES INTERNOS (DEPOIS DOS IMPORTS)
+// COMPONENTES INTERNOS COM ISOLAÇÃO DE ESTILOS
 // ============================================================================
 
 // 🎯 COMPONENTE DE LOADING OTIMIZADO
 const PageLoader = () => (
-  <div className="page-loader">
-    <div className="loader-spinner"></div>
-    <p>Carregando página...</p>
+  <div className="page-loader" style={{
+    all: 'initial',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f8f9fa',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    isolation: 'isolate'
+  }}>
+    <div style={{
+      width: '50px',
+      height: '50px',
+      border: '5px solid #e0e0e0',
+      borderTop: '5px solid #3498db',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }}></div>
+    <p style={{ 
+      marginTop: '20px', 
+      color: '#333',
+      fontFamily: 'Arial, sans-serif'
+    }}>Carregando página...</p>
   </div>
 );
 
 // ⚡ LOADING GLOBAL
 const GlobalLoader = () => (
-  <div className="global-loader">
-    <div className="global-spinner"></div>
-    <h2>PrimeStock</h2>
-    <p>Inicializando sistema...</p>
+  <div className="global-loader" style={{
+    all: 'initial',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#ffffff',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+    isolation: 'isolate'
+  }}>
+    <div style={{
+      width: '60px',
+      height: '60px',
+      border: '6px solid #f3f3f3',
+      borderTop: '6px solid #2c3e50',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }}></div>
+    <h2 style={{ 
+      marginTop: '20px', 
+      color: '#2c3e50',
+      fontFamily: 'Arial, sans-serif'
+    }}>PrimeStock</h2>
+    <p style={{ 
+      color: '#7f8c8d',
+      fontFamily: 'Arial, sans-serif'
+    }}>Inicializando sistema...</p>
   </div>
 );
 
@@ -129,11 +181,25 @@ const ProtectedRoute = ({ children, allowedProfiles = [] }) => {
     }
     
     return (
-      <div className="access-denied">
-        <h1>🔒 Acesso Negado</h1>
-        <p>Seu perfil <strong>{user.perfil}</strong> não tem acesso a esta página.</p>
-        <p>Perfis permitidos: <strong>{allowedProfiles.join(', ')}</strong></p>
-        <Link to="/dashboard" className="btn btn--primary">
+      <div style={{
+        all: 'initial',
+        display: 'block',
+        padding: '40px',
+        textAlign: 'center',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <h1 style={{ color: '#e74c3c', marginBottom: '20px' }}>🔒 Acesso Negado</h1>
+        <p style={{ marginBottom: '10px' }}>Seu perfil <strong>{user.perfil}</strong> não tem acesso a esta página.</p>
+        <p style={{ marginBottom: '20px' }}>Perfis permitidos: <strong>{allowedProfiles.join(', ')}</strong></p>
+        <Link to="/dashboard" style={{
+          display: 'inline-block',
+          padding: '10px 20px',
+          backgroundColor: '#3498db',
+          color: 'white',
+          textDecoration: 'none',
+          borderRadius: '4px',
+          fontWeight: 'bold'
+        }}>
           Voltar ao Dashboard
         </Link>
       </div>
@@ -159,15 +225,38 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// 📱 LAYOUT MODERNO COM NAVBAR E SUSPENSE
+// 📱 LAYOUT MODERNO COM ISOLAÇÃO DE ESTILOS
 const MainLayout = ({ children }) => {
   return (
-    <div className="app-layout">
+    <div style={{
+      all: 'initial',
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+      width: '100%',
+      isolation: 'isolate'
+    }}>
       <Navbar />
-      <main className="main-content">
-        <div className="content-wrapper">
+      <main style={{
+        all: 'initial',
+        flex: 1,
+        marginTop: '70px',
+        padding: '20px',
+        width: '100%',
+        display: 'block',
+        position: 'relative'
+      }}>
+        <div style={{
+          all: 'initial',
+          display: 'block',
+          maxWidth: '1400px',
+          margin: '0 auto',
+          width: '100%'
+        }}>
           <Suspense fallback={<PageLoader />}>
-            {children}
+            <div style={{ all: 'initial', display: 'block' }}>
+              {children}
+            </div>
           </Suspense>
         </div>
       </main>
@@ -185,12 +274,21 @@ function AppContent() {
 
   // ⚡ EFEITO PARA GARANTIR CARREGAMENTO COMPLETO
   useEffect(() => {
+    // Forçar reset de estilos
+    document.documentElement.style.cssText = 'scroll-behavior: smooth;';
+    document.body.style.cssText = 'overflow-x: hidden; position: relative;';
+    
     const timer = setTimeout(() => {
       setAppLoaded(true);
       document.body.classList.add('loaded');
     }, 800);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      document.body.classList.remove('loaded');
+      document.documentElement.style.cssText = '';
+      document.body.style.cssText = '';
+    };
   }, []);
 
   // 🎯 MOSTRAR LOADING GLOBAL ENQUANTO O APP NÃO CARREGOU
@@ -199,7 +297,7 @@ function AppContent() {
   }
 
   return (
-    <div className="App">
+    <div style={{ all: 'initial', display: 'block', isolation: 'isolate' }}>
       <Router>
         <Routes>
           {/* 🚪 ROTA DE LOGIN */}
@@ -345,8 +443,6 @@ function AppContent() {
             } 
           />
           
-          {/* ... continuam todas as outras rotas exatamente como você tinha ... */}
-          {/* 🔄 MOVIMENTAÇÕES - CONTINUAÇÃO */}
           <Route 
             path="/movimentacoes/detalhes/:id" 
             element={
@@ -736,10 +832,24 @@ function AppContent() {
           <Route 
             path="*" 
             element={
-              <div className="not-found">
-                <h1>404 - Página Não Encontrada</h1>
-                <p>A página que você está procurando não existe.</p>
-                <Link to="/dashboard" className="btn btn--primary">
+              <div style={{
+                all: 'initial',
+                display: 'block',
+                padding: '40px',
+                textAlign: 'center',
+                fontFamily: 'Arial, sans-serif'
+              }}>
+                <h1 style={{ color: '#e74c3c', marginBottom: '20px' }}>404 - Página Não Encontrada</h1>
+                <p style={{ marginBottom: '20px' }}>A página que você está procurando não existe.</p>
+                <Link to="/dashboard" style={{
+                  display: 'inline-block',
+                  padding: '10px 20px',
+                  backgroundColor: '#3498db',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '4px',
+                  fontWeight: 'bold'
+                }}>
                   Voltar ao Dashboard
                 </Link>
               </div>

@@ -23,12 +23,7 @@ const Navbar = () => {
     { path: '/itens', icon: '📦', label: 'Itens' },
     { path: '/movimentacoes', icon: '🔄', label: 'Movimentações' },
     { path: '/manutencoes', icon: '🛠️', label: 'Manutenções' },
-    { 
-      path: '/solicitacoes', 
-      icon: '📝', 
-      label: 'Solicitações',
-      roles: ['admin', 'coordenador', 'gerente', 'tecnico', 'analista', 'estagiario', 'aprendiz', 'admin_estoque']
-    }
+  
   ];
 
   const reportItems = [

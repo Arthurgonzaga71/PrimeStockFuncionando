@@ -1,22 +1,15 @@
-// CORRIGIDO: solicitacaoRoutes.js
+// CORRIGIDO COMPLETAMENTE - solicitacaoRoutes.js
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
 const { sequelize } = require('../config/database');
-const { Op } = require('sequelize');
-const Solicitacao = require('../models/Solicitacao');
-const SolicitacaoItem = require('../models/SolicitacaoItens');
-const HistoricoSolicitacao = require('../models/HistoricoSolicitacoes');
 
-// REMOVIDO: syncModels não é necessário
-// REMOVIDO: Funções canCreateSolicitacao, canApproveSolicitacao, canProcessEstoque - são verificações inline
-
-// 🆕 POST /api/solicitacoes - Criar nova solicitação (CORRIGIDO)
+// 🆕 POST /api/solicitacoes - Criar nova solicitação
 router.post('/', auth, async (req, res) => {
-    console.log('📝 [CORRIGIDA - SEM LIMITE DE ITENS] Criando nova solicitação...');
+    console.log('📝 Criando nova solicitação...');
     
     try {
-        const allowedProfiles = ['admin', 'admin_estoque', 'tecnico', 'analista', 'coordenador', 'gerente'];
+        const allowedProfiles = ['admin', 'admin_estoque', 'tecnico', 'analista', 'coordenador', 'gerente', 'tecnico_manutencao'];
         if (!allowedProfiles.includes(req.user?.perfil)) {
             return res.status(403).json({
                 success: false,
@@ -52,10 +45,9 @@ router.post('/', auth, async (req, res) => {
             });
         }
 
-        // 🔧 SOLUÇÃO DEFINITIVA: Query direta
         const ano = new Date().getFullYear();
         
-        // 1. Gerar código
+        // Gerar código
         const [ultimaSolicitacao] = await sequelize.query(
             `SELECT id, codigo_solicitacao FROM solicitacoes 
              WHERE codigo_solicitacao LIKE ?
@@ -77,7 +69,7 @@ router.post('/', auth, async (req, res) => {
         const codigo_solicitacao = `SOL-${ano}-${sequencia.toString().padStart(3, '0')}`;
         console.log('🔧 Código gerado:', codigo_solicitacao);
         
-        // 2. INSERIR SOLICITAÇÃO (CORRIGIDO: sem atualizado_em, que não existe)
+        // Inserir solicitação
         const [result] = await sequelize.query(
             `INSERT INTO solicitacoes (
                 codigo_solicitacao,
@@ -93,8 +85,9 @@ router.post('/', auth, async (req, res) => {
                 urgencia_compra,
                 data_devolucao_prevista,
                 status,
-                nivel_aprovacao_atual
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                nivel_aprovacao_atual,
+                data_solicitacao
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             {
                 replacements: [
                     codigo_solicitacao,
@@ -118,7 +111,7 @@ router.post('/', auth, async (req, res) => {
 
         const solicitacaoId = result;
         
-        // 3. Inserir itens (se houver)
+        // Inserir itens
         if (itens && itens.length > 0) {
             for (const item of itens) {
                 await sequelize.query(
@@ -158,7 +151,7 @@ router.post('/', auth, async (req, res) => {
             console.log('✅ Itens inseridos:', itens.length);
         }
 
-        // 4. Registrar histórico
+        // Registrar histórico
         await sequelize.query(
             `INSERT INTO historico_solicitacoes (
                 solicitacao_id, 
@@ -177,7 +170,8 @@ router.post('/', auth, async (req, res) => {
                         prioridade,
                         tipo,
                         tipo_solicitacao,
-                        status: 'rascunho'
+                        status: 'rascunho',
+                        codigo: codigo_solicitacao
                     })
                 ],
                 type: sequelize.QueryTypes.INSERT
@@ -200,30 +194,15 @@ router.post('/', auth, async (req, res) => {
 
     } catch (error) {
         console.error('❌ ERRO ao criar solicitação:', error.message);
-        console.error('❌ Stack trace:', error.stack);
-        
-        let errorMessage = 'Erro interno do servidor ao criar solicitação';
-        
-        if (error.name === 'SequelizeDatabaseError') {
-            if (error.message.includes('Table')) {
-                errorMessage = 'Erro no banco de dados. Tabela não encontrada.';
-            } else if (error.message.includes('column')) {
-                errorMessage = 'Erro no banco de dados. Coluna não encontrada: ' + error.message;
-            }
-        }
-
         res.status(500).json({
             success: false,
-            error: errorMessage,
-            details: process.env.NODE_ENV === 'development' ? {
-                message: error.message,
-                sql: error.sql
-            } : undefined
+            error: 'Erro interno do servidor ao criar solicitação',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
 
-// 📝 PUT /api/solicitacoes/:id - Atualizar solicitação (CORRIGIDO)
+// 📝 PUT /api/solicitacoes/:id - Atualizar solicitação
 router.put('/:id', auth, async (req, res) => {
     const transaction = await sequelize.transaction();
     
@@ -244,15 +223,16 @@ router.put('/:id', auth, async (req, res) => {
         } = req.body;
 
         console.log('✏️ Atualizando solicitação:', id);
-        console.log('📦 Itens recebidos:', itens?.length || 0, 'itens');
 
         const [solicitacao] = await sequelize.query(
             `SELECT * FROM solicitacoes 
-             WHERE id = ? AND status = 'rascunho'`,
+             WHERE id = ?`,
             {
-                replacements: [id],
-                transaction,
-                type: sequelize.QueryTypes.SELECT
+               replacements: [id],
+        // ⚠️ REMOVER transaction daqui - usar a transaction separadamente
+        type: sequelize.QueryTypes.SELECT,
+        transaction: transaction  // ✅ CORRETO: passar transaction como opção separada
+               
             }
         );
 
@@ -260,7 +240,16 @@ router.put('/:id', auth, async (req, res) => {
             await transaction.rollback();
             return res.status(404).json({
                 success: false,
-                error: 'Solicitação não encontrada ou não pode ser editada (não está em rascunho)'
+                error: 'Solicitação não encontrada'
+            });
+        }
+
+        // Verificar se pode editar - APENAS rascunho
+        if (solicitacao.status !== 'rascunho') {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `Solicitação não pode ser editada no status: ${solicitacao.status}`
             });
         }
 
@@ -272,7 +261,6 @@ router.put('/:id', auth, async (req, res) => {
             });
         }
 
-        // CORRIGIDO: Usar 'data_atualizacao' que é o nome correto da coluna (não atualizado_em)
         await sequelize.query(
             `UPDATE solicitacoes SET
                 titulo = COALESCE(?, titulo),
@@ -284,7 +272,8 @@ router.put('/:id', auth, async (req, res) => {
                 fornecedor_sugerido = COALESCE(?, fornecedor_sugerido),
                 link_referencia = COALESCE(?, link_referencia),
                 urgencia_compra = COALESCE(?, urgencia_compra),
-                data_devolucao_prevista = COALESCE(?, data_devolucao_prevista)
+                data_devolucao_prevista = COALESCE(?, data_devolucao_prevista),
+                atualizado_em = NOW()
             WHERE id = ?`,
             {
                 replacements: [
@@ -398,24 +387,40 @@ router.put('/:id', auth, async (req, res) => {
         console.error('❌ Erro ao atualizar solicitação:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno do servidor ao atualizar solicitação: ' + error.message
+            error: 'Erro interno do servidor ao atualizar solicitação'
         });
     }
 });
 
-// 📤 PUT /api/solicitacoes/:id/enviar - Enviar para aprovação
-// 📤 PUT /api/solicitacoes/:id/enviar - ENVIAR PARA APROVAÇÃO (VERSÃO DEFINITIVA)
+// 📤 PUT /api/solicitacoes/:id/enviar - Enviar para aprovação (FLUXO SIMPLIFICADO)
+// 📤 PUT /api/solicitacoes/:id/enviar - Enviar para aprovação (FLUXO SIMPLIFICADO)
+// 📤 PUT /api/solicitacoes/:id/enviar - Enviar para aprovação (CORRIGIDO)
 router.put('/:id/enviar', auth, async (req, res) => {
-    console.log('📤 [ENVIAR] Enviando solicitação ID:', req.params.id);
-    
     const transaction = await sequelize.transaction();
     
     try {
         const { id } = req.params;
         
-        // 1. Buscar a solicitação
+        console.log('📤 [ENVIAR] Enviando solicitação ID:', id);
+        console.log('👤 Usuário:', {
+            id: req.user.id,
+            nome: req.user.nome,
+            perfil: req.user.perfil
+        });
+
+        // 1. Buscar a solicitação - VERIFIQUE A ESTRUTURA DA TABELA
         const [solicitacao] = await sequelize.query(
-            `SELECT * FROM solicitacoes WHERE id = ?`,
+            `SELECT 
+                id,
+                codigo_solicitacao,
+                titulo,
+                descricao,
+                status,
+                usuario_solicitante_id,
+                usuario_aprovador_id,
+                data_solicitacao,
+                atualizado_em
+             FROM solicitacoes WHERE id = ?`,
             {
                 replacements: [id],
                 transaction,
@@ -431,15 +436,24 @@ router.put('/:id/enviar', auth, async (req, res) => {
             });
         }
 
-        console.log('📊 Status atual:', {
-            id: solicitacao.id,
-            status: solicitacao.status || '(vazio)',
-            titulo: solicitacao.titulo,
-            solicitante_id: solicitacao.usuario_solicitante_id,
-            usuario_atual_id: req.user.id
-        });
+        // 2. Verificar status - APENAS rascunho pode ser enviado
+        const statusAtual = solicitacao.status || '';
+        const statusNormalizado = statusAtual.trim().toLowerCase();
+        
+        // ✅ ACEITAR status vazio como rascunho
+        const isRascunho = statusNormalizado === 'rascunho' || statusNormalizado === '';
+        
+        if (!isRascunho) {
+            await transaction.rollback();
+            return res.status(400).json({
+                success: false,
+                error: `Solicitação não pode ser enviada. Status atual: "${solicitacao.status || 'vazio'}"`,
+                status_atual: solicitacao.status,
+                esperado: 'rascunho'
+            });
+        }
 
-        // 2. Verificar permissões
+        // 3. Verificar se é o solicitante
         if (solicitacao.usuario_solicitante_id !== req.user.id) {
             await transaction.rollback();
             return res.status(403).json({
@@ -448,25 +462,7 @@ router.put('/:id/enviar', auth, async (req, res) => {
             });
         }
 
-        // 3. Normalizar status
-        const statusAtual = (solicitacao.status || '').trim().toLowerCase();
-        const statusFinal = statusAtual === '' ? 'rascunho' : statusAtual;
-
-        console.log('🔧 Status processado:', {
-            original: `"${solicitacao.status}"`,
-            processado: `"${statusFinal}"`
-        });
-
-        // 4. Verificar se pode enviar
-        if (statusFinal !== 'rascunho') {
-            await transaction.rollback();
-            return res.status(400).json({
-                success: false,
-                error: `Solicitação não pode ser enviada no status "${statusFinal}". Apenas rascunhos podem ser enviados.`
-            });
-        }
-
-        // 5. Verificar se tem itens
+        // 4. Verificar se tem itens
         const [itensResult] = await sequelize.query(
             `SELECT COUNT(*) as count FROM solicitacao_itens WHERE solicitacao_id = ?`,
             {
@@ -484,15 +480,59 @@ router.put('/:id/enviar', auth, async (req, res) => {
             });
         }
 
-        // 6. Atualizar para 'pendente'
-        await sequelize.query(
-            `UPDATE solicitacoes SET status = 'pendente' WHERE id = ?`,
+        // 5. Encontrar coordenador ou gerente para aprovação
+        let aprovadorId = null;
+        
+        // Buscar coordenador
+        const [coordenador] = await sequelize.query(
+            `SELECT id FROM usuarios 
+             WHERE perfil = 'coordenador' 
+             AND ativo = TRUE 
+             LIMIT 1`,
             {
-                replacements: [id],
+                transaction,
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+        
+        if (coordenador) {
+            aprovadorId = coordenador.id;
+        } else {
+            // Se não tiver coordenador, buscar gerente
+            const [gerente] = await sequelize.query(
+                `SELECT id FROM usuarios 
+                 WHERE perfil = 'gerente' 
+                 AND ativo = TRUE 
+                 LIMIT 1`,
+                {
+                    transaction,
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+            
+            if (gerente) {
+                aprovadorId = gerente.id;
+            }
+        }
+
+        console.log('👑 Aprovador encontrado:', aprovadorId);
+
+        // 6. Atualizar para 'pendente' - CORRIGIDO
+        await sequelize.query(
+            `UPDATE solicitacoes SET 
+                status = 'pendente',
+                usuario_aprovador_id = ?,
+                data_solicitacao = NOW(),
+                atualizado_em = NOW()
+             WHERE id = ?`,
+            {
+                replacements: [aprovadorId, id],
                 transaction,
                 type: sequelize.QueryTypes.UPDATE
             }
         );
+
+        console.log('✅ Status atualizado: rascunho → pendente');
 
         // 7. Registrar histórico
         await sequelize.query(
@@ -509,8 +549,9 @@ router.put('/:id/enviar', auth, async (req, res) => {
                     req.user.id,
                     `Solicitação enviada para aprovação`,
                     JSON.stringify({ 
-                        status_anterior: statusFinal,
+                        status_anterior: solicitacao.status || 'rascunho',
                         status_novo: 'pendente',
+                        aprovador_id: aprovadorId,
                         observacoes: 'Enviada pelo solicitante'
                     })
                 ],
@@ -521,41 +562,32 @@ router.put('/:id/enviar', auth, async (req, res) => {
 
         await transaction.commit();
 
-        console.log('✅ ENVIADA COM SUCESSO!', {
-            id,
-            status_anterior: statusFinal,
-            status_novo: 'pendente'
-        });
+        console.log('🎉 Solicitação ENVIADA com sucesso! ID:', id);
 
-        // 8. Retornar sucesso
         res.json({
             success: true,
             data: {
                 id: parseInt(id),
                 status: 'pendente',
                 message: 'Solicitação enviada para aprovação com sucesso!',
-                detalhes: {
-                    codigo: solicitacao.codigo_solicitacao,
-                    titulo: solicitacao.titulo,
-                    data_envio: new Date().toISOString()
-                }
+                fluxo: 'Técnico → Coordenador/Gerente (aprovador) → Estoque (entrega)'
             }
         });
 
     } catch (error) {
         await transaction.rollback();
-        console.error('❌ ERRO AO ENVIAR:', error.message);
-        console.error('❌ Stack trace:', error.stack);
+        console.error('❌ ERRO CRÍTICO ao enviar:', error.message);
+        console.error('Stack trace completo:', error.stack);
         
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao enviar solicitação para aprovação',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Erro interno ao enviar solicitação',
+            detalhes: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });
 
-// ✅ POST /api/solicitacoes/:id/aprovar - Aprovar solicitação (NOVO ENDPOINT)
+// ✅ PUT /api/solicitacoes/:id/aprovar - Aprovar solicitação (FLUXO SIMPLIFICADO)
 router.put('/:id/aprovar', auth, async (req, res) => {
     const transaction = await sequelize.transaction();
     
@@ -565,19 +597,19 @@ router.put('/:id/aprovar', auth, async (req, res) => {
         
         console.log('✅ [APROVAR] Aprovando solicitação ID:', id);
 
-        // 1. Verificar permissões do usuário
+        // 1. Verificar permissões
         const userProfile = req.user.perfil;
-        const allowedProfiles = ['admin', 'admin_estoque', 'coordenador', 'gerente'];
+        const allowedProfiles = ['coordenador', 'gerente', 'admin', 'admin_estoque'];
         
         if (!allowedProfiles.includes(userProfile)) {
             await transaction.rollback();
             return res.status(403).json({
                 success: false,
-                error: 'Apenas administradores, coordenadores ou gerentes podem aprovar solicitações'
+                error: 'Apenas coordenadores, gerentes ou administradores podem aprovar'
             });
         }
 
-        // 2. Buscar solicitação
+        // 2. Buscar solicitação COM STATUS 'pendente'
         const [solicitacao] = await sequelize.query(
             `SELECT * FROM solicitacoes 
              WHERE id = ? AND status = 'pendente'`,
@@ -596,7 +628,7 @@ router.put('/:id/aprovar', auth, async (req, res) => {
             });
         }
 
-        // 3. Verificar se não é o próprio solicitante
+        // 3. Verificar se não é a própria solicitação
         if (solicitacao.usuario_solicitante_id === req.user.id) {
             await transaction.rollback();
             return res.status(400).json({
@@ -605,11 +637,14 @@ router.put('/:id/aprovar', auth, async (req, res) => {
             });
         }
 
-        // 4. Atualizar status para 'aprovada'
+        // 4. Atualizar para 'aprovada' (FLUXO SIMPLIFICADO: pendente → aprovada)
         await sequelize.query(
             `UPDATE solicitacoes SET 
                 status = 'aprovada',
-                usuario_aprovador_id = ?
+                usuario_aprovador_id = ?,
+                data_aprovacao = NOW(),
+                nivel_aprovacao_atual = nivel_aprovacao_atual + 1,
+                atualizado_em = NOW()
              WHERE id = ?`,
             {
                 replacements: [req.user.id, id],
@@ -618,13 +653,15 @@ router.put('/:id/aprovar', auth, async (req, res) => {
             }
         );
 
-        // 5. Atualizar status dos itens
+        // 5. Atualizar status dos itens para 'aprovado'
         await sequelize.query(
             `UPDATE solicitacao_itens SET 
-                status_item = 'aprovado'
+                status_item = 'aprovado',
+                quantidade_aprovada = quantidade_solicitada,
+                observacao_aprovador = ?
              WHERE solicitacao_id = ?`,
             {
-                replacements: [id],
+                replacements: [observacoes || 'Aprovado pelo coordenador/gerente', id],
                 transaction,
                 type: sequelize.QueryTypes.UPDATE
             }
@@ -647,8 +684,8 @@ router.put('/:id/aprovar', auth, async (req, res) => {
                     JSON.stringify({ 
                         status_anterior: 'pendente',
                         status_novo: 'aprovada',
-                        aprovador_id: req.user.id,
-                        aprovador_perfil: userProfile,
+                        aprovador: req.user.nome,
+                        perfil: userProfile,
                         observacoes: observacoes
                     })
                 ],
@@ -662,7 +699,8 @@ router.put('/:id/aprovar', auth, async (req, res) => {
         console.log('✅ Solicitação APROVADA:', {
             id,
             aprovador: req.user.nome,
-            perfil: userProfile
+            status_anterior: 'pendente',
+            status_novo: 'aprovada'
         });
 
         res.json({
@@ -670,26 +708,27 @@ router.put('/:id/aprovar', auth, async (req, res) => {
             data: {
                 id: parseInt(id),
                 status: 'aprovada',
+                message: 'Solicitação aprovada com sucesso!',
+                observacoes: 'Aguardando processamento no estoque',
                 aprovador: {
                     id: req.user.id,
                     nome: req.user.nome,
                     perfil: userProfile
-                },
-                message: 'Solicitação aprovada com sucesso!'
+                }
             }
         });
 
     } catch (error) {
         await transaction.rollback();
-        console.error('❌ Erro ao aprovar solicitação:', error);
+        console.error('❌ Erro ao aprovar:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao aprovar solicitação: ' + error.message
+            error: 'Erro interno ao aprovar solicitação'
         });
     }
 });
 
-// ❌ PUT /api/solicitacoes/:id/rejeitar - Rejeitar solicitação (MANTIDO)
+// ❌ PUT /api/solicitacoes/:id/rejeitar - Rejeitar solicitação (FLUXO SIMPLIFICADO)
 router.put('/:id/rejeitar', auth, async (req, res) => {
     const transaction = await sequelize.transaction();
     
@@ -708,16 +747,17 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
         }
 
         const userProfile = req.user.perfil;
-        const allowedProfiles = ['admin', 'admin_estoque', 'coordenador', 'gerente'];
+        const allowedProfiles = ['coordenador', 'gerente', 'admin', 'admin_estoque'];
         
         if (!allowedProfiles.includes(userProfile)) {
             await transaction.rollback();
             return res.status(403).json({
                 success: false,
-                error: 'Apenas administradores, coordenadores ou gerentes podem rejeitar solicitações'
+                error: 'Apenas coordenadores, gerentes ou administradores podem rejeitar'
             });
         }
 
+        // Buscar solicitação COM STATUS 'pendente'
         const [solicitacao] = await sequelize.query(
             `SELECT * FROM solicitacoes 
              WHERE id = ? AND status = 'pendente'`,
@@ -732,10 +772,11 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
             await transaction.rollback();
             return res.status(404).json({
                 success: false,
-                error: 'Solicitação não encontrada ou não está pendente'
+                error: 'Solicitação não encontrada ou não está pendente de aprovação'
             });
         }
 
+        // Não pode rejeitar própria solicitação
         if (solicitacao.usuario_solicitante_id === req.user.id) {
             await transaction.rollback();
             return res.status(400).json({
@@ -744,13 +785,14 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
             });
         }
 
-        // 🔧 CORREÇÃO 5: Remover data_aprovacao (não existe)
+        // Atualizar status: 'pendente' → 'rejeitada'
         await sequelize.query(
             `UPDATE solicitacoes SET 
                 status = 'rejeitada',
                 usuario_aprovador_id = ?,
-                motivo_rejeicao = ?
-                -- REMOVIDO: data_aprovacao = NOW() (coluna não existe)
+                motivo_rejeicao = ?,
+                data_aprovacao = NOW(),
+                atualizado_em = NOW()
              WHERE id = ?`,
             {
                 replacements: [req.user.id, motivo_rejeicao, id],
@@ -759,6 +801,7 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
             }
         );
 
+        // Atualizar status dos itens para 'rejeitado'
         await sequelize.query(
             `UPDATE solicitacao_itens SET 
                 status_item = 'rejeitado',
@@ -771,6 +814,7 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
             }
         );
 
+        // Registrar histórico
         await sequelize.query(
             `INSERT INTO historico_solicitacoes (
                 solicitacao_id, 
@@ -787,8 +831,8 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
                     JSON.stringify({ 
                         status_anterior: 'pendente',
                         status_novo: 'rejeitada',
-                        rejeitador_id: req.user.id,
-                        rejeitador_perfil: userProfile,
+                        rejeitador: req.user.nome,
+                        perfil: userProfile,
                         motivo_rejeicao: motivo_rejeicao
                     })
                 ],
@@ -799,7 +843,7 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
 
         await transaction.commit();
 
-        console.log('✅ Solicitação REJEITADA:', {
+        console.log('✅ REJEITADA COM SUCESSO!', {
             id,
             rejeitador: req.user.nome,
             motivo: motivo_rejeicao
@@ -810,26 +854,177 @@ router.put('/:id/rejeitar', auth, async (req, res) => {
             data: {
                 id: parseInt(id),
                 status: 'rejeitada',
+                message: 'Solicitação rejeitada com sucesso',
                 rejeitador: {
                     id: req.user.id,
                     nome: req.user.nome,
                     perfil: userProfile
                 },
-                message: 'Solicitação rejeitada com sucesso'
+                motivo_rejeicao: motivo_rejeicao
             }
         });
 
     } catch (error) {
         await transaction.rollback();
-        console.error('❌ Erro ao rejeitar solicitação:', error);
+        console.error('❌ Erro ao rejeitar:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno do servidor ao rejeitar solicitação: ' + error.message
+            error: 'Erro interno ao rejeitar solicitação'
         });
     }
 });
 
-// 🔍 GET /api/solicitacoes - TODAS AS SOLICITAÇÕES COM PESQUISA AVANÇADA (CORRIGIDO)
+// 📦 PUT /api/solicitacoes/:id/processar-estoque - Processar no estoque (APROVADA → ENTREGUE)
+router.put('/:id/processar-estoque', auth, async (req, res) => {
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const { id } = req.params;
+        const { 
+            observacoes_entrega = '',
+            quantidade_entregue = null
+        } = req.body;
+        
+        console.log('📦 [ESTOQUE] Processando solicitação ID:', id);
+
+        // Verificar permissão
+        if (!['admin', 'admin_estoque'].includes(req.user.perfil)) {
+            await transaction.rollback();
+            return res.status(403).json({
+                success: false,
+                error: 'Apenas administradores ou responsáveis pelo estoque podem processar solicitações'
+            });
+        }
+
+        // Buscar solicitação COM STATUS 'aprovada'
+        const [solicitacao] = await sequelize.query(
+            `SELECT 
+                s.*,
+                u.nome as solicitante_nome,
+                u_aprov.nome as aprovador_nome
+             FROM solicitacoes s
+             JOIN usuarios u ON s.usuario_solicitante_id = u.id
+             LEFT JOIN usuarios u_aprov ON s.usuario_aprovador_id = u_aprov.id
+             WHERE s.id = ? AND s.status = 'aprovada'`,
+            {
+                replacements: [id],
+                transaction,
+                type: sequelize.QueryTypes.SELECT
+            }
+        );
+
+        if (!solicitacao) {
+            await transaction.rollback();
+            return res.status(404).json({
+                success: false,
+                error: 'Solicitação não encontrada ou não está aprovada para processamento no estoque'
+            });
+        }
+
+        // Atualizar para 'entregue' (FLUXO: aprovada → entregue)
+        await sequelize.query(
+            `UPDATE solicitacoes SET 
+                status = 'entregue',
+                data_entrega = NOW(),
+                observacoes_entrega = ?,
+                atualizado_em = NOW()
+             WHERE id = ?`,
+            {
+                replacements: [observacoes_entrega || 'Entregue pelo estoque', id],
+                transaction,
+                type: sequelize.QueryTypes.UPDATE
+            }
+        );
+
+        // Atualizar quantidade entregue nos itens (opcional)
+        if (quantidade_entregue && quantidade_entregue > 0) {
+            await sequelize.query(
+                `UPDATE solicitacao_itens 
+                 SET quantidade_entregue = ?,
+                     status_item = 'entregue'
+                 WHERE solicitacao_id = ?`,
+                {
+                    replacements: [quantidade_entregue, id],
+                    transaction,
+                    type: sequelize.QueryTypes.UPDATE
+                }
+            );
+        } else {
+            // Se não especificar quantidade, usar a quantidade aprovada
+            await sequelize.query(
+                `UPDATE solicitacao_itens 
+                 SET quantidade_entregue = quantidade_aprovada,
+                     status_item = 'entregue'
+                 WHERE solicitacao_id = ?`,
+                {
+                    replacements: [id],
+                    transaction,
+                    type: sequelize.QueryTypes.UPDATE
+                }
+            );
+        }
+
+        // Registrar histórico
+        await sequelize.query(
+            `INSERT INTO historico_solicitacoes (
+                solicitacao_id, 
+                usuario_id, 
+                acao, 
+                descricao,
+                dados_alterados
+            ) VALUES (?, ?, 'entrega', ?, ?)`,
+            {
+                replacements: [
+                    id,
+                    req.user.id,
+                    `Solicitação entregue pelo estoque (${quantidade_entregue || 'todos'} itens)`,
+                    JSON.stringify({ 
+                        status_anterior: 'aprovada',
+                        status_novo: 'entregue',
+                        entregador: req.user.nome,
+                        quantidade_entregue: quantidade_entregue || 'total',
+                        observacoes: observacoes_entrega
+                    })
+                ],
+                transaction,
+                type: sequelize.QueryTypes.INSERT
+            }
+        );
+
+        await transaction.commit();
+
+        console.log('✅ [ESTOQUE] Solicitação entregue:', {
+            id,
+            status: 'aprovada → entregue',
+            quantidade: quantidade_entregue || 'todos'
+        });
+
+        res.json({
+            success: true,
+            data: {
+                id: parseInt(id),
+                status: 'entregue',
+                message: 'Solicitação entregue com sucesso!',
+                entregador: {
+                    id: req.user.id,
+                    nome: req.user.nome,
+                    perfil: req.user.perfil
+                },
+                quantidade_entregue: quantidade_entregue || 'todos os itens'
+            }
+        });
+
+    } catch (error) {
+        await transaction.rollback();
+        console.error('❌ ERRO no estoque:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro interno ao processar no estoque'
+        });
+    }
+});
+
+// 🔍 GET /api/solicitacoes - Todas as solicitações
 router.get('/', auth, async (req, res) => {
     try {
         const {
@@ -916,11 +1111,13 @@ router.get('/', auth, async (req, res) => {
                 u.nome as solicitante_nome,
                 u.departamento,
                 u.email as solicitante_email,
+                u_aprov.nome as aprovador_nome,
                 (SELECT COUNT(*) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as total_itens,
                 (SELECT SUM(si.quantidade_solicitada * COALESCE(si.valor_unitario_estimado, 0)) 
                  FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as valor_total_estimado
              FROM solicitacoes s
              JOIN usuarios u ON s.usuario_solicitante_id = u.id
+             LEFT JOIN usuarios u_aprov ON s.usuario_aprovador_id = u_aprov.id
              WHERE ${whereClause}
              ORDER BY ${sortBy} ${sortOrder}
              LIMIT :limit OFFSET :offset`,
@@ -963,12 +1160,12 @@ router.get('/', auth, async (req, res) => {
         console.error('❌ Erro ao buscar solicitações:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao buscar solicitações: ' + error.message
+            error: 'Erro interno ao buscar solicitações'
         });
     }
 });
 
-// 📋 GET /api/solicitacoes/minhas - Minhas solicitações (MANTIDO)
+// 📋 GET /api/solicitacoes/minhas - Minhas solicitações
 router.get('/minhas', auth, async (req, res) => {
     try {
         const {
@@ -1074,80 +1271,108 @@ router.get('/minhas', auth, async (req, res) => {
         console.error('❌ Erro ao buscar minhas solicitações:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao buscar minhas solicitações: ' + error.message
+            error: 'Erro interno ao buscar minhas solicitações'
         });
     }
 });
 
-// 📋 GET /api/solicitacoes/pendentes - Solicitações pendentes de aprovação (SIMPLIFICADO)
+// 📋 GET /api/solicitacoes/pendentes - Solicitações pendentes de aprovação
+// 📋 GET /api/solicitacoes/pendentes - Solicitações pendentes de aprovação (MELHORADA)
 router.get('/pendentes', auth, async (req, res) => {
-    try {
-        const userProfile = req.user.perfil;
-        const allowedProfiles = ['admin', 'admin_estoque', 'coordenador', 'gerente'];
-        
-        if (!allowedProfiles.includes(userProfile)) {
-            return res.status(403).json({
-                success: false,
-                error: 'Apenas administradores, coordenadores ou gerentes podem ver solicitações pendentes'
-            });
-        }
-
-        const { search } = req.query;
-        let whereClause = "s.status = 'pendente'";
-        const replacements = [];
-
-        if (search) {
-            whereClause += ` AND (s.codigo_solicitacao LIKE ? OR s.titulo LIKE ? OR u.nome LIKE ?)`;
-            const searchTerm = `%${search}%`;
-            replacements.push(searchTerm, searchTerm, searchTerm);
-        }
-
-        const solicitacoes = await sequelize.query(
-            `SELECT 
-                s.id,
-                s.codigo_solicitacao,
-                s.titulo,
-                s.prioridade,
-                s.tipo,
-                s.data_solicitacao,
-                u.nome as solicitante_nome,
-                u.departamento
-             FROM solicitacoes s
-             JOIN usuarios u ON s.usuario_solicitante_id = u.id
-             WHERE ${whereClause}
-             ORDER BY s.data_solicitacao DESC`,
-            {
-                replacements,
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
-
-        res.json({
-            success: true,
-            data: solicitacoes || [],
-            count: solicitacoes?.length || 0,
-            message: `Encontradas ${solicitacoes?.length || 0} solicitações pendentes`
-        });
-
-    } catch (error) {
-        console.error('❌ Erro ao buscar solicitações pendentes:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno ao buscar solicitações pendentes: ' + error.message
-        });
+  try {
+    const userProfile = req.user.perfil;
+    const allowedProfiles = ['coordenador', 'gerente', 'admin', 'admin_estoque'];
+    
+    if (!allowedProfiles.includes(userProfile)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Apenas coordenadores, gerentes ou administradores podem ver pendentes'
+      });
     }
+
+    const { search } = req.query;
+    const replacements = [];
+    
+    // BUSCAR APENAS STATUS 'pendente'
+    let whereClause = `s.status = 'pendente'`;
+    
+    // Não mostrar solicitações próprias para aprovação
+    whereClause += ` AND s.usuario_solicitante_id != ?`;
+    replacements.push(req.user.id);
+
+    if (search) {
+      whereClause += ` AND (s.codigo_solicitacao LIKE ? OR s.titulo LIKE ? OR u.nome LIKE ?)`;
+      const searchTerm = `%${search}%`;
+      replacements.push(searchTerm, searchTerm, searchTerm);
+    }
+
+    console.log('🔍 [PENDENTES] Buscando para:', req.user.nome, 'Perfil:', userProfile);
+
+    const solicitacoes = await sequelize.query(
+      `SELECT 
+          s.id,
+          s.codigo_solicitacao,
+          s.titulo,
+          s.descricao,
+          s.prioridade,
+          s.tipo,
+          s.status,
+          s.data_solicitacao,
+          u.nome as solicitante_nome,
+          u.departamento,
+          u.email as solicitante_email,
+          u.perfil as solicitante_perfil,
+          (SELECT COUNT(*) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as total_itens,
+          (SELECT SUM(si.quantidade_solicitada) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as quantidade_total,
+          (SELECT SUM(si.quantidade_solicitada * COALESCE(si.valor_unitario_estimado, 0)) 
+           FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as valor_total_estimado,
+          TIMESTAMPDIFF(HOUR, s.data_solicitacao, NOW()) as horas_pendente
+       FROM solicitacoes s
+       JOIN usuarios u ON s.usuario_solicitante_id = u.id
+       WHERE ${whereClause}
+       ORDER BY 
+          CASE s.prioridade 
+            WHEN 'urgente' THEN 1
+            WHEN 'alta' THEN 2
+            WHEN 'media' THEN 3
+            WHEN 'baixa' THEN 4
+            ELSE 5
+          END,
+          s.data_solicitacao ASC`,
+      {
+        replacements,
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
+    console.log('✅ [PENDENTES] Solicitações encontradas:', solicitacoes?.length || 0);
+
+    res.json({
+      success: true,
+      data: {
+        solicitacoes: solicitacoes || [],
+        count: solicitacoes?.length || 0,
+        usuario: {
+          id: req.user.id,
+          nome: req.user.nome,
+          perfil: userProfile,
+          podeAprovar: true
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [PENDENTES] Erro ao buscar pendentes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno ao buscar pendentes'
+    });
+  }
 });
 
-// 🏭 GET /api/solicitacoes/para-estoque - Solicitações aprovadas para o estoque (CORRIGIDO)
-// 🏭 GET /api/solicitacoes/para-estoque - Solicitações para o estoque (VERSÃO CORRIGIDA)
-// 🏭 GET /api/solicitacoes/para-estoque - Solicitações para o estoque (VERSÃO COMPLETA)
-// 🏭 GET /api/solicitacoes/para-estoque - VERSÃO CORRIGIDA COM COLUNAS QUE EXISTEM
+// 📦 GET /api/solicitacoes/para-estoque - Solicitações para o estoque (após aprovação)
 router.get('/para-estoque', auth, async (req, res) => {
     try {
-        const { search, status } = req.query;
-
-        console.log('🏭 [ESTOQUE] Buscando solicitações para estoque');
-
         const userProfile = req.user.perfil;
         if (!['admin', 'admin_estoque'].includes(userProfile)) {
             return res.status(403).json({
@@ -1156,14 +1381,10 @@ router.get('/para-estoque', auth, async (req, res) => {
             });
         }
 
-        // Status que aparecem na tela do estoque
-        let whereClause = "s.status IN ('aprovada', 'processando_estoque', 'entregue', 'rejeitada_estoque')";
-        const replacements = [];
+        const { search } = req.query;
 
-        if (status) {
-            whereClause = "s.status = ?";
-            replacements.push(status);
-        }
+        const replacements = [];
+        let whereClause = `s.status = 'aprovada'`;
 
         if (search) {
             whereClause += ` AND (s.codigo_solicitacao LIKE ? OR s.titulo LIKE ? OR u.nome LIKE ?)`;
@@ -1171,101 +1392,63 @@ router.get('/para-estoque', auth, async (req, res) => {
             replacements.push(searchTerm, searchTerm, searchTerm);
         }
 
-        console.log('📊 [ESTOQUE] Buscando com WHERE:', whereClause);
-
-        // CONSULTA CORRIGIDA - VERIFIQUE AS COLUNAS REAIS DA SUA TABELA
         const solicitacoes = await sequelize.query(
             `SELECT 
                 s.id,
                 s.codigo_solicitacao,
                 s.titulo,
-                s.descricao,
                 s.prioridade,
                 s.tipo,
                 s.status,
                 s.data_solicitacao,
-                -- NÃO TEMOS data_aprovacao, então usamos data_atualizacao ou NULL
-                NULL as data_aprovacao,
-                -- NÃO TEMOS observacoes_entrega, temos observacoes_estoque ou motivo_rejeicao
-                COALESCE(s.observacoes_estoque, s.motivo_rejeicao) as observacoes_entrega,
-                s.motivo_rejeicao,
+                s.data_aprovacao,
                 u.nome as solicitante_nome,
                 u.departamento,
                 u_aprov.nome as aprovador_nome,
-                -- Estatísticas
                 (SELECT COUNT(*) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as total_itens,
-                (SELECT SUM(si.quantidade_solicitada) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as quantidade_total,
-                (SELECT SUM(si.quantidade_entregue) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as quantidade_entregue,
-                s.usuario_aprovador_id
+                (SELECT SUM(si.quantidade_solicitada) FROM solicitacao_itens si WHERE si.solicitacao_id = s.id) as quantidade_total
              FROM solicitacoes s
              JOIN usuarios u ON s.usuario_solicitante_id = u.id
              LEFT JOIN usuarios u_aprov ON s.usuario_aprovador_id = u_aprov.id
              WHERE ${whereClause}
-             ORDER BY 
-                 CASE s.status 
-                     WHEN 'aprovada' THEN 1
-                     WHEN 'processando_estoque' THEN 2
-                     WHEN 'entregue' THEN 3
-                     WHEN 'rejeitada_estoque' THEN 4
-                     ELSE 5
-                 END,
-                 s.data_solicitacao DESC`,
+             ORDER BY s.data_aprovacao DESC`,
             {
                 replacements,
                 type: sequelize.QueryTypes.SELECT
             }
         );
 
-        console.log('✅ [ESTOQUE] Solicitações encontradas:', solicitacoes?.length || 0);
-        
-        // Log para debug
-        if (solicitacoes && solicitacoes.length > 0) {
-            console.log('📋 Exemplo de dados retornados:', {
-                id: solicitacoes[0].id,
-                codigo: solicitacoes[0].codigo_solicitacao,
-                titulo: solicitacoes[0].titulo,
-                status: solicitacoes[0].status,
-                campos: Object.keys(solicitacoes[0])
-            });
-        }
-
         res.json({
             success: true,
             data: solicitacoes || [],
-            count: solicitacoes?.length || 0,
-            message: `Encontradas ${solicitacoes?.length || 0} solicitações para o estoque`
+            count: solicitacoes?.length || 0
         });
 
     } catch (error) {
-        console.error('❌ [ESTOQUE] ERRO ao buscar solicitações:', error.message);
-        
-        // Verificar exatamente qual coluna não existe
-        if (error.message.includes('Unknown column')) {
-            console.error('❌ Coluna não encontrada no banco. Faça este teste:');
-            console.error('❌ Execute: SHOW COLUMNS FROM solicitacoes;');
-        }
-        
+        console.error('❌ Erro ao buscar solicitações para estoque:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao buscar solicitações para estoque: ' + error.message
+            error: 'Erro interno ao buscar solicitações para estoque'
         });
     }
 });
-// 🔍 GET /api/solicitacoes/:id - Buscar solicitação detalhada (CORRIGIDO)
+
+// 🔍 GET /api/solicitacoes/:id - Buscar solicitação detalhada
+// 🔍 GET /api/solicitacoes/:id - Buscar solicitação detalhada COM BOTÕES
 router.get('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     
     console.log('📄 [DETALHE] Buscando detalhes da solicitação ID:', id);
 
-    // 1. Buscar dados básicos - CORRIGIDO: Verificar se retorna status
     const [solicitacao] = await sequelize.query(
       `SELECT 
           s.*,
           u_solicitante.nome as solicitante_nome,
           u_solicitante.departamento,
           u_solicitante.perfil as solicitante_perfil,
-          u_aprovador.nome as aprovador_nome
+          u_aprovador.nome as aprovador_nome,
+          u_aprovador.perfil as aprovador_perfil
        FROM solicitacoes s
        JOIN usuarios u_solicitante ON s.usuario_solicitante_id = u_solicitante.id
        LEFT JOIN usuarios u_aprovador ON s.usuario_aprovador_id = u_aprovador.id
@@ -1282,19 +1465,38 @@ router.get('/:id', auth, async (req, res) => {
         error: 'Solicitação não encontrada'
       });
     }
+
+    // Normalizar status se estiver vazio
     if (!solicitacao.status || solicitacao.status.trim() === '') {
-      console.log('⚠️ Status vazio detectado, normalizando para "rascunho"');
       solicitacao.status = 'rascunho';
     }
 
-    console.log('✅ [DETALHE] Solicitação encontrada:', {
-      id: solicitacao.id,
-      codigo: solicitacao.codigo_solicitacao,
+    // 🔥 CALCULAR BOTÕES DISPONÍVEIS PARA O USUÁRIO ATUAL
+    const botoesDisponiveis = {
+      podeEnviar: solicitacao.status === 'rascunho' && solicitacao.usuario_solicitante_id === req.user.id,
+      podeAprovar: ['pendente'].includes(solicitacao.status) && 
+                   ['coordenador', 'gerente', 'admin', 'admin_estoque'].includes(req.user.perfil) &&
+                   solicitacao.usuario_solicitante_id !== req.user.id,
+      podeRejeitar: ['pendente'].includes(solicitacao.status) && 
+                    ['coordenador', 'gerente', 'admin', 'admin_estoque'].includes(req.user.perfil) &&
+                    solicitacao.usuario_solicitante_id !== req.user.id,
+      podeEditar: solicitacao.status === 'rascunho' && solicitacao.usuario_solicitante_id === req.user.id,
+      podeCancelar: (solicitacao.usuario_solicitante_id === req.user.id && 
+                     ['rascunho', 'pendente'].includes(solicitacao.status)) ||
+                    ['admin', 'admin_estoque'].includes(req.user.perfil),
+      podeProcessarEstoque: solicitacao.status === 'aprovada' && 
+                           ['admin', 'admin_estoque'].includes(req.user.perfil),
+      podeEntregar: solicitacao.status === 'aprovada' && 
+                   ['admin', 'admin_estoque'].includes(req.user.perfil)
+    };
+
+    console.log('🔘 BOTÕES DISPONÍVEIS:', {
       status: solicitacao.status,
-      titulo: solicitacao.titulo
+      perfil_usuario: req.user.perfil,
+      botoes: botoesDisponiveis
     });
 
-    // 2. Buscar itens
+    // Buscar itens
     const itens = await sequelize.query(
       `SELECT 
           si.*,
@@ -1316,7 +1518,7 @@ router.get('/:id', auth, async (req, res) => {
       }
     );
 
-    // 3. Buscar histórico
+    // Buscar histórico
     const historico = await sequelize.query(
       `SELECT 
           h.*,
@@ -1332,7 +1534,7 @@ router.get('/:id', auth, async (req, res) => {
       }
     );
 
-    // 4. Calcular estatísticas
+    // Calcular estatísticas
     const valorTotal = itens.reduce((total, item) => {
       const valor = parseFloat(item.valor_unitario_estimado) || 0;
       const quantidade = parseInt(item.quantidade_solicitada) || 0;
@@ -1342,16 +1544,11 @@ router.get('/:id', auth, async (req, res) => {
     console.log('✅ [DETALHE] Detalhes carregados:', {
       id,
       titulo: solicitacao.titulo,
-      status: solicitacao.status || 'NÃO TEM STATUS',
+      status: solicitacao.status,
       itens_count: itens.length,
-      valor_total: valorTotal
+      valor_total: valorTotal,
+      botoes: botoesDisponiveis
     });
-
-    // 🔥 CORREÇÃO: Garantir que status não seja null ou vazio
-    if (!solicitacao.status || solicitacao.status.trim() === '') {
-      console.warn('⚠️ [DETALHE] Status está vazio/nulo, definindo como "rascunho"');
-      solicitacao.status = 'rascunho';
-    }
 
     res.json({
       success: true,
@@ -1359,6 +1556,7 @@ router.get('/:id', auth, async (req, res) => {
         ...solicitacao,
         itens: itens || [],
         historico: historico || [],
+        botoes_disponiveis: botoesDisponiveis, // 🔥 ADICIONADO
         estatisticas: {
           total_itens: itens.length,
           valor_total_estimado: valorTotal,
@@ -1373,48 +1571,12 @@ router.get('/:id', auth, async (req, res) => {
     console.error('❌ [DETALHE] Erro ao buscar detalhes:', error);
     res.status(500).json({
       success: false,
-      error: 'Erro interno ao buscar detalhes: ' + error.message
+      error: 'Erro interno ao buscar detalhes'
     });
   }
 });
 
-// 📝 GET /api/solicitacoes/:id/itens - Buscar apenas itens da solicitação
-router.get('/:id/itens', auth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const itens = await sequelize.query(
-            `SELECT 
-                si.*,
-                i.nome as item_estoque_nome,
-                i.numero_serie,
-                i.codigo_barras,
-                i.quantidade as quantidade_disponivel
-             FROM solicitacao_itens si
-             LEFT JOIN itens i ON si.item_id = i.id
-             WHERE si.solicitacao_id = ?
-             ORDER BY si.id`,
-            {
-                replacements: [id],
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
-
-        res.json({
-            success: true,
-            data: itens || []
-        });
-
-    } catch (error) {
-        console.error('❌ Erro ao buscar itens da solicitação:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro interno ao buscar itens: ' + error.message
-        });
-    }
-});
-
-// 🗑️ DELETE /api/solicitacoes/:id - Cancelar solicitação (MANTIDO)
+// 🗑️ DELETE /api/solicitacoes/:id - Cancelar solicitação
 router.delete('/:id', auth, async (req, res) => {
     const transaction = await sequelize.transaction();
     
@@ -1454,6 +1616,7 @@ router.delete('/:id', auth, async (req, res) => {
             });
         }
 
+        // Status permitidos para cancelamento
         const statusPermitidos = ['rascunho', 'pendente'];
         if (!statusPermitidos.includes(solicitacao.status)) {
             await transaction.rollback();
@@ -1466,7 +1629,8 @@ router.delete('/:id', auth, async (req, res) => {
         await sequelize.query(
             `UPDATE solicitacoes SET 
                 status = 'cancelada',
-                motivo_rejeicao = COALESCE(?, motivo_rejeicao)
+                motivo_rejeicao = COALESCE(?, motivo_rejeicao),
+                atualizado_em = NOW()
              WHERE id = ?`,
             {
                 replacements: [motivo || 'Cancelada pelo usuário', id],
@@ -1502,9 +1666,7 @@ router.delete('/:id', auth, async (req, res) => {
                     JSON.stringify({ 
                         status_anterior: solicitacao.status,
                         status_novo: 'cancelada',
-                        motivo_cancelamento: motivo,
-                        cancelador_id: req.user.id,
-                        cancelador_perfil: req.user.perfil
+                        motivo_cancelamento: motivo
                     })
                 ],
                 transaction,
@@ -1530,209 +1692,55 @@ router.delete('/:id', auth, async (req, res) => {
         console.error('❌ Erro ao cancelar solicitação:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao cancelar solicitação: ' + error.message
+            error: 'Erro interno ao cancelar solicitação'
         });
     }
 });
-// 📦 PUT /api/solicitacoes/:id/processar-estoque - VERSÃO DEFINITIVA SEM COLUNAS NOVAS
-// 📦 PUT /api/solicitacoes/:id/processar-estoque - VERSÃO COMPLETA COM 3 ESTÁGIOS
-// 📦 PUT /api/solicitacoes/:id/processar-estoque - VERSÃO CORRIGIDA
-router.put('/:id/processar-estoque', auth, async (req, res) => {
-    const transaction = await sequelize.transaction();
-    
+
+// 🐛 GET /api/solicitacoes/debug/status - DEBUG do sistema
+router.get('/debug/status', auth, async (req, res) => {
     try {
-        const { id } = req.params;
-        const { 
-            acao, // 'aceitar', 'entregar' ou 'rejeitar'
-            observacoes_estoque = '',
-            quantidade_entregue = null
-        } = req.body;
-        
-        console.log('📦 [ESTOQUE] Processando:', {
-            id, acao, usuario: req.user.nome, perfil: req.user.perfil
-        });
-
-        // Verificar permissões
-        const allowedProfiles = ['admin', 'admin_estoque'];
-        if (!allowedProfiles.includes(req.user.perfil)) {
-            await transaction.rollback();
-            return res.status(403).json({
-                success: false,
-                error: 'Apenas administradores ou responsáveis pelo estoque podem processar solicitações'
-            });
-        }
-
-        // Buscar solicitação
-        const [solicitacao] = await sequelize.query(
+        // Listar TODAS as solicitações com status
+        const [solicitacoes] = await sequelize.query(
             `SELECT 
-                s.*,
-                u.nome as solicitante_nome
+                s.id,
+                s.codigo_solicitacao,
+                s.titulo,
+                s.status,
+                s.data_solicitacao,
+                u.nome as solicitante_nome,
+                u.perfil as solicitante_perfil
              FROM solicitacoes s
              JOIN usuarios u ON s.usuario_solicitante_id = u.id
-             WHERE s.id = ?`,
+             ORDER BY s.id`,
             {
-                replacements: [id],
-                transaction,
                 type: sequelize.QueryTypes.SELECT
             }
         );
 
-        if (!solicitacao) {
-            await transaction.rollback();
-            return res.status(404).json({
-                success: false,
-                error: 'Solicitação não encontrada'
-            });
-        }
-
-        let novoStatus, mensagem, acaoHistorico, dadosAlterados;
-
-        // ESTÁGIO 1: ACEITAR NO ESTOQUE (de 'aprovada' para 'processando_estoque')
-        if (acao === 'aceitar' && solicitacao.status === 'aprovada') {
-            novoStatus = 'processando_estoque';
-            mensagem = `✅ Solicitação aceita pelo estoque. Agora está aguardando entrega.`;
-            acaoHistorico = 'estoque_aceitar';
-            dadosAlterados = {
-                status_anterior: 'aprovada',
-                status_novo: 'processando_estoque',
-                responsavel: req.user.nome,
-                data_aceitacao: new Date().toISOString(),
-                observacoes: observacoes_estoque || `Aceita por ${req.user.nome} no estoque`
-            };
-
-        // ESTÁGIO 2: FINALIZAR ENTREGA (de 'processando_estoque' para 'entregue')
-        } else if (acao === 'entregar' && solicitacao.status === 'processando_estoque') {
-            novoStatus = 'entregue';
-            
-            if (!quantidade_entregue) {
-                await transaction.rollback();
-                return res.status(400).json({
-                    success: false,
-                    error: 'Quantidade entregue é obrigatória para finalizar entrega'
-                });
-            }
-
-            mensagem = `📦 Entrega finalizada com sucesso! ${quantidade_entregue} item(s) entregue(s).`;
-            acaoHistorico = 'entrega_finalizada';
-            dadosAlterados = {
-                status_anterior: 'processando_estoque',
-                status_novo: 'entregue',
-                entregador: req.user.nome,
-                data_entrega: new Date().toISOString(),
-                quantidade_entregue: quantidade_entregue,
-                observacoes: observacoes_estoque || `Entrega realizada por ${req.user.nome}`
-            };
-
-            // Atualizar quantidade entregue nos itens
-            await sequelize.query(
-                `UPDATE solicitacao_itens 
-                 SET quantidade_entregue = ?,
-                     status_item = 'entregue'
-                 WHERE solicitacao_id = ?`,
-                {
-                    replacements: [quantidade_entregue, id],
-                    transaction,
-                    type: sequelize.QueryTypes.UPDATE
-                }
-            );
-
-        // ESTÁGIO 3: REJEITAR (em qualquer ponto)
-        } else if (acao === 'rejeitar') {
-            novoStatus = 'rejeitada_estoque';
-            mensagem = `❌ Solicitação rejeitada pelo estoque.`;
-            acaoHistorico = 'estoque_rejeitar';
-            dadosAlterados = {
-                status_anterior: solicitacao.status,
-                status_novo: 'rejeitada_estoque',
-                rejeitador: req.user.nome,
-                motivo_rejeicao: observacoes_estoque,
-                data_rejeicao: new Date().toISOString()
-            };
-
-        } else {
-            await transaction.rollback();
-            return res.status(400).json({
-                success: false,
-                error: `Ação "${acao}" não permitida para status "${solicitacao.status}"`
-            });
-        }
-
-        // Atualizar status da solicitação
-        // USANDO APENAS COLUNAS QUE EXISTEM: status e data_entrega (se for entrega)
-        if (acao === 'entregar') {
-            await sequelize.query(
-                `UPDATE solicitacoes SET 
-                    status = ?,
-                    data_entrega = NOW()  -- Esta coluna EXISTE
-                 WHERE id = ?`,
-                {
-                    replacements: [novoStatus, id],
-                    transaction,
-                    type: sequelize.QueryTypes.UPDATE
-                }
-            );
-        } else {
-            await sequelize.query(
-                `UPDATE solicitacoes SET 
-                    status = ?
-                 WHERE id = ?`,
-                {
-                    replacements: [novoStatus, id],
-                    transaction,
-                    type: sequelize.QueryTypes.UPDATE
-                }
-            );
-        }
-
-        // Registrar histórico
-        await sequelize.query(
-            `INSERT INTO historico_solicitacoes (
-                solicitacao_id, 
-                usuario_id, 
-                acao, 
-                descricao,
-                dados_alterados
-            ) VALUES (?, ?, ?, ?, ?)`,
-            {
-                replacements: [
-                    id,
-                    req.user.id,
-                    acaoHistorico,
-                    `Solicitação ${acao === 'aceitar' ? 'aceita' : acao === 'entregar' ? 'entregue' : 'rejeitada'} pelo estoque (${req.user.nome})`,
-                    JSON.stringify(dadosAlterados)
-                ],
-                transaction,
-                type: sequelize.QueryTypes.INSERT
-            }
-        );
-
-        await transaction.commit();
-
-        console.log(`✅ Estoque: ${acao} - ID ${id}: ${solicitacao.status} → ${novoStatus}`);
+        // Contar por status
+        const contagemStatus = {};
+        solicitacoes?.forEach(sol => {
+            const status = sol.status || '(NULL/Vazio)';
+            contagemStatus[status] = (contagemStatus[status] || 0) + 1;
+        });
 
         res.json({
             success: true,
             data: {
-                id: parseInt(id),
-                status: novoStatus,
-                mensagem: mensagem,
-                dados: dadosAlterados,
-                processador: {
-                    id: req.user.id,
-                    nome: req.user.nome,
-                    perfil: req.user.perfil
-                },
-                timestamp: new Date().toISOString()
+                total_solicitacoes: solicitacoes?.length || 0,
+                contagem_status: contagemStatus,
+                lista_completa: solicitacoes || []
             }
         });
 
     } catch (error) {
-        await transaction.rollback();
-        console.error('❌ ERRO no estoque:', error);
+        console.error('❌ Erro no debug:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro interno ao processar no estoque: ' + error.message
+            error: 'Erro interno no debug'
         });
     }
 });
+
 module.exports = router;

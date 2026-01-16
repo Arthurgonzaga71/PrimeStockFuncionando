@@ -220,47 +220,10 @@ const Login = () => {
           </Button>
         </form>
 
-        {/* 🧪 CREDENCIAIS DE TESTE */}
-        {connectionTested && apiStatus === 'online' && (
-          <div className="test-credentials">
-            <p className="test-credentials__title">🧪 Credenciais de Teste:</p>
-            <div className="test-credentials__buttons">
-              <button 
-                type="button"
-                onClick={() => fillTestCredentials('admin')}
-                className="test-btn test-btn--admin"
-              >
-                Admin
-              </button>
-              <button 
-                type="button"
-                onClick={() => fillTestCredentials('coordenador')}
-                className="test-btn test-btn--coord"
-              >
-                Coordenador
-              </button>
-              <button 
-                type="button"
-                onClick={() => fillTestCredentials('tecnico')}
-                className="test-btn test-btn--tech"
-              >
-                Técnico
-              </button>
-            </div>
-            <p className="test-credentials__note">
-              Senha para todos: <strong>123456</strong>
-            </p>
-          </div>
-        )}
+       
 
         {/* 📞 FOOTER */}
         <div className="login-footer">
-          <p className="login-help">
-            Problemas para acessar?{' '}
-            <a href="#support" className="help-link">
-              Contate o suporte
-            </a>
-          </p>
           <div className="login-version">
             v2.0.0 • Integrado com Back-end
           </div>

@@ -845,3 +845,42 @@ body {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.empty-state {
+  padding: 3rem;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.solic-codigo {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.priority-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 1rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.9em;
+  }
+}

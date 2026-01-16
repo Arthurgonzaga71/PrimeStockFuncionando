@@ -27,15 +27,13 @@ const HistoricoSolicitacoes = sequelize.define('HistoricoSolicitacoes', {
   },
   acao: {
     type: DataTypes.ENUM(
-      'criacao',
-      'edicao',
-      'envio_aprovacao',
-      'aprovacao_coordenador',
-      'rejeicao_coordenador',
-      'envio_estoque',
-      'processamento_estoque',
-      'entrega',
-      'rejeicao_estoque',
+      'criacao', 
+      'edicao', 
+      'envio_aprovacao', 
+      'aprovacao', 
+      'rejeicao', 
+      'entrega', 
+      'devolucao',
       'cancelamento'
     ),
     allowNull: false
