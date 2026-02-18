@@ -62,20 +62,19 @@ const modeloEquipamentoRoutes = require('./src/routes/modeloEquipamentoRoutes');
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // 🛠️ CORREÇÃO: CORS Expandido
 const corsOptions = {
   origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://192.168.205.141:3000',
-    'http://192.168.205.141:3001',
-    'http://localhost:5173', // Vite dev server
-    'http://127.0.0.1:5173',
-    'http://192.168.205.141:5173',
+    'http://localhost:4001',
+        'http://127.0.0.1:4001',
+        'http://192.168.200.133:4001',
+        'http://localhost:3000',
+        'http://192.168.200.133:3000',
+        'http://192.168.200.133:4001',
+        'http://192.168.205.137:4001,'
+
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Auth-Token'],
@@ -657,7 +656,7 @@ const startServer = async () => {
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 BACKEND RODANDO NA PORTA ${PORT}`);
       console.log(`📍 Local: http://localhost:${PORT}`);
-      console.log(`🌐 Rede: http://192.168.205.141:${PORT}`);
+      console.log(`🌐 Rede: http://192.168.200.133:${PORT}`);
       console.log(`🔐 Login: POST http://localhost:${PORT}/api/auth/login`);
       console.log(`📊 Dashboard: GET http://localhost:${PORT}/api/dashboard`);
       console.log(`🔧 Manutenções: GET http://localhost:${PORT}/api/manutencoes`);

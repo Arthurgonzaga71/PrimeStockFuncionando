@@ -1,4 +1,4 @@
-// routes/manutencoesRoutes.js - VERSÃO CORRIGIDA
+// routes/manutencoesRoutes.js - VERSÃO CORRIGIDA COMPLETAMENTE
 const express = require('express');
 const { Manutencao, Item, Usuario } = require('../models/associations');
 const { auth } = require('../middleware/auth');
@@ -9,11 +9,10 @@ const router = express.Router();
 
 // 🆕 SISTEMA DE PERMISSÕES POR ROTA
 const permissoesRotas = {
-  // 🔍 CONSULTAR - Todos podem ver manutenções (CORRIGIDO)
+  // 🔍 CONSULTAR - Todos podem ver manutenções
   consultar: (req, res, next) => {
-    const perfil = req.usuario?.perfil; // 🔥 CORREÇÃO: req.usuario
+    const perfil = req.usuario?.perfil;
     
-    // ✅ PERMITIDOS: Todos os perfis podem ver
     if (['admin', 'admin_estoque', 'coordenador', 'gerente', 'tecnico', 'analista', 'estagiario', 'aprendiz'].includes(perfil)) {
       return next();
     }
@@ -24,11 +23,10 @@ const permissoesRotas = {
     });
   },
   
-  // ✏️ CRIAR MANUTENÇÃO - Técnico/Analista podem criar
+  // ✏️ CRIAR MANUTENÇÃO
   criar: (req, res, next) => {
-    const perfil = req.usuario?.perfil; // 🔥 CORREÇÃO: req.usuario
+    const perfil = req.usuario?.perfil;
     
-    // ✅ PERMITIDOS: Admin, Estoque, Coordenador, Gerente, Técnico, Analista
     if (['admin', 'admin_estoque', 'coordenador', 'gerente', 'tecnico', 'analista'].includes(perfil)) {
       return next();
     }
@@ -40,9 +38,9 @@ const permissoesRotas = {
     });
   },
   
-  // 🔄 EDITAR - Técnico/Analista podem editar
+  // 🔄 EDITAR
   editar: (req, res, next) => {
-    const perfil = req.usuario?.perfil; // 🔥 CORREÇÃO: req.usuario
+    const perfil = req.usuario?.perfil;
     
     if (['admin', 'admin_estoque', 'coordenador', 'gerente', 'tecnico', 'analista'].includes(perfil)) {
       return next();
@@ -56,7 +54,7 @@ const permissoesRotas = {
   
   // 🗑️ DELETAR - Apenas Admin
   deletar: (req, res, next) => {
-    if (req.usuario?.perfil === 'admin') { // 🔥 CORREÇÃO: req.usuario
+    if (req.usuario?.perfil === 'admin') {
       return next();
     }
     res.status(403).json({ 
@@ -65,9 +63,9 @@ const permissoesRotas = {
     });
   },
   
-  // 📊 RELATÓRIOS - Coordenador para cima
+  // 📊 RELATÓRIOS
   relatorios: (req, res, next) => {
-    const perfil = req.usuario?.perfil; // 🔥 CORREÇÃO: req.usuario
+    const perfil = req.usuario?.perfil;
     
     if (['admin', 'admin_estoque', 'coordenador', 'gerente'].includes(perfil)) {
       return next();
@@ -84,7 +82,7 @@ const permissoesRotas = {
 // 🔍 ROTAS DE CONSULTA
 // =============================================
 
-// GET /api/manutencoes - Listar todas as manutenções (CORRIGIDO)
+// GET /api/manutencoes - Listar todas as manutenções
 router.get('/', 
   auth, 
   permissoesRotas.consultar,
@@ -103,7 +101,7 @@ router.get('/',
       const offset = (page - 1) * limit;
       const where = {};
       
-      // 🔥 FILTROS
+      // FILTROS
       if (status) where.status = status;
       if (tipo_manutencao) where.tipo_manutencao = tipo_manutencao;
       if (item_id && !isNaN(parseInt(item_id))) where.item_id = parseInt(item_id);
@@ -113,9 +111,6 @@ router.get('/',
           [Op.between]: [new Date(data_inicio), new Date(data_fim + ' 23:59:59')]
         };
       }
-      
-      // 🔥 CORREÇÃO: REMOVER FILTRO POR USUÁRIO - TODOS VEEM TODAS AS MANUTENÇÕES
-      // Não filtra por usuário - todos podem ver todas as manutenções
       
       const { count, rows: manutencoes } = await Manutencao.findAndCountAll({
         where,
@@ -127,13 +122,7 @@ router.get('/',
           },
           { 
             model: Usuario, 
-            as: 'tecnico',
-            attributes: ['id', 'nome', 'email']
-          },
-          // 🔥 ADICIONE O USUÁRIO QUE SOLICITOU A MANUTENÇÃO
-          { 
-            model: Usuario, 
-            as: 'usuario',
+            as: 'tecnico',  // ✅ ALIAS ÚNICO: tecnico
             attributes: ['id', 'nome', 'email', 'perfil']
           }
         ],
@@ -161,7 +150,7 @@ router.get('/',
     }
 });
 
-// GET /api/manutencoes/:id - Buscar manutenção por ID (CORRIGIDO)
+// GET /api/manutencoes/:id - Buscar manutenção por ID
 router.get('/:id', 
   auth, 
   permissoesRotas.consultar,
@@ -185,13 +174,7 @@ router.get('/:id',
           },
           { 
             model: Usuario, 
-            as: 'tecnico',
-            attributes: ['id', 'nome', 'email']
-          },
-          // 🔥 ADICIONE O USUÁRIO QUE SOLICITOU A MANUTENÇÃO
-          { 
-            model: Usuario, 
-            as: 'usuario',
+            as: 'tecnico',  // ✅ ALIAS ÚNICO: tecnico
             attributes: ['id', 'nome', 'email', 'perfil']
           }
         ]
@@ -203,9 +186,6 @@ router.get('/:id',
           message: 'Manutenção não encontrada'
         });
       }
-      
-      // 🔥 CORREÇÃO: REMOVER RESTRIÇÃO DE VISUALIZAÇÃO
-      // Todos podem ver qualquer manutenção
 
       res.json({
         success: true,
@@ -224,7 +204,7 @@ router.get('/:id',
 // ✏️ ROTAS DE CRIAÇÃO
 // =============================================
 
-// POST /api/manutencoes - Criar nova manutenção (CORRIGIDO)
+// POST /api/manutencoes - Criar nova manutenção
 router.post('/', 
   auth, 
   permissoesRotas.criar,
@@ -241,7 +221,7 @@ router.post('/',
         status = 'aberta'
       } = req.body;
 
-      // 🔥 VALIDAÇÕES
+      // VALIDAÇÕES
       if (!item_id || isNaN(parseInt(item_id))) {
         await transaction.rollback();
         return res.status(400).json({
@@ -281,7 +261,7 @@ router.post('/',
       // Criar manutenção
       const manutencao = await Manutencao.create({
         item_id: itemId,
-        usuario_id: req.usuario.id, // 🔥 CORREÇÃO: req.usuario
+        usuario_id: req.usuario.id,
         tipo_manutencao,
         descricao_problema: descricao_problema.trim(),
         descricao_solucao: descricao_solucao?.trim() || null,
@@ -308,12 +288,7 @@ router.post('/',
           },
           { 
             model: Usuario, 
-            as: 'tecnico',
-            attributes: ['id', 'nome', 'email']
-          },
-          { 
-            model: Usuario, 
-            as: 'usuario',
+            as: 'tecnico',  // ✅ ALIAS ÚNICO: tecnico
             attributes: ['id', 'nome', 'email', 'perfil']
           }
         ]
@@ -346,7 +321,7 @@ router.post('/',
 // 🔄 ROTAS DE EDIÇÃO
 // =============================================
 
-// PUT /api/manutencoes/:id - Atualizar manutenção (CORRIGIDO)
+// PUT /api/manutencoes/:id - Atualizar manutenção
 router.put('/:id', 
   auth, 
   permissoesRotas.editar,
@@ -373,7 +348,7 @@ router.put('/:id',
         });
       }
       
-      // 🔥 VERIFICAR SE PODE EDITAR (apenas se for dele ou se for admin/coordenador/estoque)
+      // VERIFICAR SE PODE EDITAR
       if (req.usuario.perfil !== 'admin' && 
           !['coordenador', 'gerente', 'admin_estoque'].includes(req.usuario.perfil) &&
           manutencao.usuario_id !== req.usuario.id) {
@@ -386,7 +361,7 @@ router.put('/:id',
 
       const updateData = {};
       
-      // 🔥 ATUALIZAÇÃO COM VALIDAÇÃO
+      // ATUALIZAÇÃO COM VALIDAÇÃO
       if (req.body.tipo_manutencao !== undefined) {
         if (!['preventiva', 'corretiva', 'instalacao'].includes(req.body.tipo_manutencao)) {
           await transaction.rollback();
@@ -457,7 +432,7 @@ router.put('/:id',
           },
           { 
             model: Usuario, 
-            as: 'usuario',
+            as: 'tecnico',  // ✅ ALIAS ÚNICO: tecnico
             attributes: ['id', 'nome', 'email', 'perfil']
           }
         ]
@@ -484,7 +459,7 @@ router.put('/:id',
 // 🗑️ ROTAS DE EXCLUSÃO
 // =============================================
 
-// DELETE /api/manutencoes/:id - Deletar manutenção (CORRIGIDO)
+// DELETE /api/manutencoes/:id - Deletar manutenção
 router.delete('/:id', 
   auth, 
   permissoesRotas.deletar,
@@ -540,7 +515,7 @@ router.delete('/:id',
 // 📊 ROTAS DE RELATÓRIOS E DASHBOARD
 // =============================================
 
-// GET /api/manutencoes/relatorio/estatisticas - Relatórios (CORRIGIDO)
+// GET /api/manutencoes/relatorio/estatisticas - Relatórios
 router.get('/relatorio/estatisticas', 
   auth, 
   permissoesRotas.relatorios,
@@ -582,7 +557,7 @@ router.get('/relatorio/estatisticas',
     }
 });
 
-// GET /api/manutencoes/dashboard/resumo - Dashboard (CORRIGIDO)
+// GET /api/manutencoes/dashboard/resumo - Dashboard
 router.get('/dashboard/resumo', 
   auth, 
   permissoesRotas.consultar,

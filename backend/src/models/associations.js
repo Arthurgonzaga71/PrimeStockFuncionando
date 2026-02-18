@@ -89,8 +89,8 @@ Manutencao.belongsTo(Item, {
   as: 'item'
 });
 Manutencao.belongsTo(Usuario, { 
-  foreignKey: 'usuario_id',
-  as: 'tecnico'
+   foreignKey: 'usuario_id',
+   as: 'tecnico' 
 });
 Usuario.hasMany(Manutencao, { 
   foreignKey: 'usuario_id',

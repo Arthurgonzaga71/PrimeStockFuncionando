@@ -1,7 +1,7 @@
-/* src/components/Navbar/Navbar.css */
+/* src/components/Navbar/Navbar.css - VERSÃO FINAL */
 
 /* =============================================
-   VARIÁVEIS E RESET
+   VARIÁVEIS
    ============================================= */
 :root {
   --navbar-bg: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
@@ -15,14 +15,12 @@
   --navbar-dropdown-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   --navbar-highlight: #38a169;
   --navbar-danger: #e53e3e;
-  --navbar-success: #38a169;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* =============================================
    NAVBAR PRINCIPAL
    ============================================= */
-
 .navbar {
   position: fixed;
   top: 0;
@@ -34,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 20px;
   z-index: 1000;
   box-shadow: var(--navbar-shadow);
   backdrop-filter: blur(10px);
@@ -42,84 +40,75 @@
 }
 
 /* =============================================
-   LOGO E BRAND
+   LOGO
    ============================================= */
-
 .navbar__brand {
   display: flex;
   align-items: center;
-  min-width: 200px;
+  min-width: 160px;
 }
 
 .navbar__logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  text-decoration: none;
-  transition: var(--transition);
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 6px 12px;
   border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
 }
 
 .navbar__logo:hover {
-  background: rgba(255, 255, 255, 0.05);
-  transform: translateY(-2px);
+  background: var(--navbar-hover);
+  transform: translateY(-1px);
 }
 
 .logo-icon {
-  font-size: 28px;
+  font-size: 24px;
   animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .logo-text {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   background: linear-gradient(135deg, #63b3ed, #4299e1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.5px;
   margin: 0;
 }
 
 /* =============================================
    MENU PRINCIPAL
    ============================================= */
-
 .navbar__menu {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
   justify-content: center;
-  max-width: 800px;
 }
 
 .navbar__item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--navbar-text);
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   transition: var(--transition);
-  position: relative;
   white-space: nowrap;
   opacity: 0.9;
+  position: relative;
 }
 
 .navbar__item:hover {
@@ -131,41 +120,68 @@
 .navbar__item.active {
   background: var(--navbar-active);
   opacity: 1;
-  box-shadow: 0 2px 10px rgba(66, 153, 225, 0.2);
 }
 
-.navbar__item.active::before {
+.navbar__item.active::after {
   content: '';
   position: absolute;
-  bottom: -1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 70%;
-  height: 3px;
-  background: linear-gradient(90deg, #63b3ed, #4299e1);
-  border-radius: 3px 3px 0 0;
+  bottom: -2px;
+  left: 20%;
+  width: 60%;
+  height: 2px;
+  background: var(--navbar-accent);
+  border-radius: 2px;
 }
 
 .navbar__icon {
-  font-size: 16px;
+  font-size: 15px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
 }
 
 .navbar__label {
   font-weight: 500;
-  letter-spacing: 0.3px;
+}
+
+/* Seta do dropdown */
+.navbar__label.has-dropdown::after,
+.dropdown .navbar__label::after {
+  content: '▾';
+  margin-left: 4px;
+  font-size: 12px;
+  opacity: 0.7;
+  transition: transform 0.2s;
+}
+
+.dropdown.active .navbar__label::after {
+  transform: rotate(180deg);
 }
 
 /* =============================================
-   DROPDOWN MENUS
+   DROPDOWNS
    ============================================= */
-
 .dropdown {
   position: relative;
+}
+
+.dropdown__menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  min-width: 220px;
+  background: var(--navbar-dropdown-bg);
+  border-radius: 8px;
+  box-shadow: var(--navbar-dropdown-shadow);
+  border: 1px solid var(--navbar-border);
+  padding: 6px;
+  z-index: 1001;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
 }
 
 .dropdown:hover .dropdown__menu {
@@ -174,130 +190,104 @@
   transform: translateY(0);
 }
 
-.dropdown__menu {
+/* Ponte invisível */
+.dropdown__bridge {
   position: absolute;
-  top: calc(100% + 8px);
+  top: -10px;
   left: 0;
-  background: var(--navbar-dropdown-bg);
-  border-radius: 12px;
-  min-width: 240px;
-  box-shadow: var(--navbar-dropdown-shadow);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 8px;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-10px);
-  transition: var(--transition);
-  z-index: 1001;
-  backdrop-filter: blur(20px);
+  width: 100%;
+  height: 15px;
+  background: transparent;
 }
 
 .dropdown__item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 14px;
   background: none;
   border: none;
   color: var(--navbar-text);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 400;
-  transition: var(--transition);
+  font-size: 13px;
   text-align: left;
+  transition: all 0.2s;
 }
 
 .dropdown__item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateX(4px);
+  background: var(--navbar-hover);
+  transform: translateX(2px);
 }
 
 .dropdown__item.highlight {
   background: linear-gradient(135deg, rgba(56, 161, 105, 0.2), rgba(56, 161, 105, 0.1));
-  border: 1px solid rgba(56, 161, 105, 0.3);
+  border-left: 2px solid var(--navbar-highlight);
 }
 
-.dropdown__item.highlight:hover {
-  background: linear-gradient(135deg, rgba(56, 161, 105, 0.3), rgba(56, 161, 105, 0.2));
-  border-color: var(--navbar-highlight);
+.dropdown__item.admin-item {
+  border-left: 2px solid #f6ad55;
 }
 
 .dropdown__item-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
+  gap: 2px;
 }
 
 .dropdown__description {
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.7;
-  font-weight: 300;
 }
 
 .dropdown__icon {
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 15px;
   width: 20px;
-  height: 20px;
+  text-align: center;
 }
 
 .dropdown__divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 8px 0;
-}
-
-.dropdown__item.admin-item {
-  color: #63b3ed;
-  font-weight: 500;
-}
-
-.dropdown__item.admin-item:hover {
-  background: rgba(99, 179, 237, 0.1);
+  background: var(--navbar-border);
+  margin: 6px 0;
 }
 
 /* =============================================
    ÁREA DO USUÁRIO
    ============================================= */
-
 .navbar__user {
   display: flex;
   align-items: center;
-  gap: 20px;
-  min-width: 200px;
+  gap: 12px;
+  min-width: 160px;
   justify-content: flex-end;
 }
 
 .user__info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: var(--transition);
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: var(--transition);
 }
 
 .user__info:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--navbar-hover);
 }
 
 .user__avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4299e1, #3182ce);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 14px;
-  color: white;
+  font-size: 13px;
   border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -308,35 +298,35 @@
 }
 
 .user__name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  white-space: nowrap;
-  max-width: 120px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user__role {
-  font-size: 12px;
+  font-size: 10px;
   opacity: 0.8;
-  font-weight: 400;
   background: rgba(255, 255, 255, 0.1);
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 2px 6px;
+  border-radius: 10px;
   text-align: center;
+  width: fit-content;
 }
 
 .navbar__logout {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: rgba(229, 62, 62, 0.1);
   color: #fc8181;
   border: 1px solid rgba(229, 62, 62, 0.3);
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   transition: var(--transition);
 }
@@ -345,504 +335,333 @@
   background: rgba(229, 62, 62, 0.2);
   border-color: rgba(229, 62, 62, 0.5);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.2);
-}
-
-.logout-icon {
-  font-size: 16px;
 }
 
 /* =============================================
-   RESPONSIVIDADE
+   BOTÃO MOBILE
+   ============================================= */
+.mobile-menu-btn {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 28px;
+  height: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mobile-menu-btn span {
+  width: 100%;
+  height: 2px;
+  background: var(--navbar-text);
+  border-radius: 2px;
+  transition: var(--transition);
+}
+
+.mobile-menu-btn.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.mobile-menu-btn.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-menu-btn.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(7px, -6px);
+}
+
+/* =============================================
+   RESPONSIVIDADE - NOTEBOOK
    ============================================= */
 
-@media (max-width: 1200px) {
+/* 1366px - Notebook padrão */
+@media (max-width: 1366px) {
   .navbar {
+    height: 60px;
     padding: 0 16px;
   }
-  
-  .navbar__menu {
-    gap: 2px;
-  }
-  
-  .navbar__item {
-    padding: 12px 16px;
-  }
-  
-  .dropdown__menu {
-    min-width: 220px;
-  }
-}
 
-@media (max-width: 1024px) {
-  .navbar {
-    height: auto;
-    flex-direction: column;
-    padding: 16px;
-    gap: 16px;
-  }
-  
-  .navbar__brand {
-    min-width: auto;
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .navbar__menu {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-  }
-  
   .navbar__item {
-    flex: 1;
-    min-width: 140px;
-    justify-content: center;
+    padding: 6px 12px;
+    font-size: 12px;
   }
-  
-  .navbar__user {
-    min-width: auto;
-    width: 100%;
-    justify-content: space-between;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .dropdown__menu {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    max-height: 60vh;
-    overflow-y: auto;
-    border-radius: 12px 12px 0 0;
-  }
-}
 
-@media (max-width: 768px) {
-  .navbar__menu {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .navbar__item {
-    justify-content: flex-start;
-    min-width: auto;
-  }
-  
-  .navbar__user {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .user__info {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .navbar__logout {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .logo-text {
-    font-size: 18px;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar {
-    padding: 12px;
-  }
-  
-  .navbar__item {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
-  
   .navbar__icon {
     font-size: 14px;
+    width: 18px;
   }
-  
+
   .user__name {
     max-width: 80px;
+    font-size: 12px;
+  }
+
+  .user__role {
+    font-size: 9px;
   }
 }
 
-/* =============================================
-   ANIMAÇÕES E EFEITOS ESPECIAIS
-   ============================================= */
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+/* 1200px - Notebook pequeno */
+@media (max-width: 1200px) {
+  .navbar__menu {
+    gap: 0;
   }
-  to {
+
+  .navbar__item {
+    padding: 6px 10px;
+  }
+
+  .dropdown__menu {
+    min-width: 200px;
+  }
+}
+
+/* 1024px - Início do modo compacto */
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 0 12px;
+  }
+
+  .navbar__brand {
+    min-width: auto;
+  }
+
+  .logo-text {
+    font-size: 16px;
+  }
+
+  .logo-icon {
+    font-size: 22px;
+  }
+
+  .user__details {
+    display: none;
+  }
+
+  .user__info {
+    padding: 4px;
+  }
+
+  .navbar__logout .logout-text {
+    display: none;
+  }
+
+  .navbar__logout {
+    padding: 6px;
+  }
+
+  /* Esconder labels em telas menores */
+  .navbar__item .navbar__label {
+    display: none;
+  }
+
+  .navbar__item {
+    padding: 8px;
+  }
+
+  /* Mostrar tooltip no hover */
+  .navbar__item[data-label]:hover::before {
+    content: attr(data-label);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navbar-dropdown-bg);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1002;
+    border: 1px solid var(--navbar-border);
+    pointer-events: none;
+  }
+
+  /* Ajustar dropdowns no modo ícone */
+  .dropdown .navbar__label {
+    display: none;
+  }
+
+  .dropdown__menu {
+    left: auto;
+    right: 0;
+  }
+}
+
+/* 900px - Ativar menu mobile */
+@media (max-width: 900px) {
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .navbar__menu {
+    position: fixed;
+    top: 60px;
+    left: -100%;
+    width: 260px;
+    height: calc(100vh - 60px);
+    background: var(--navbar-dropdown-bg);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    gap: 4px;
+  }
+
+  .navbar__menu.active {
+    left: 0;
+  }
+
+  .navbar__item {
+    width: 100%;
+    padding: 12px;
+    justify-content: flex-start;
+  }
+
+  .navbar__item .navbar__label {
+    display: inline;
+  }
+
+  .navbar__item:hover::before {
+    display: none;
+  }
+
+  .dropdown {
+    width: 100%;
+  }
+
+  .dropdown__menu {
+    position: static;
+    width: 100%;
+    margin-left: 20px;
+    margin-top: 4px;
+    box-shadow: none;
+    background: rgba(0, 0, 0, 0.2);
     opacity: 1;
-    transform: translateY(0);
+    visibility: visible;
+    transform: none;
+    display: none;
+  }
+
+  .dropdown.active .dropdown__menu {
+    display: block;
+  }
+
+  .dropdown__bridge {
+    display: none;
+  }
+
+  .user__details {
+    display: flex;
+  }
+
+  .navbar__user {
+    min-width: auto;
+  }
+
+  .navbar__logout .logout-text {
+    display: inline;
   }
 }
 
-.navbar {
-  animation: slideIn 0.3s ease;
+/* 768px - Ajustes finos */
+@media (max-width: 768px) {
+  .navbar {
+    height: 55px;
+    padding: 0 10px;
+  }
+
+  .navbar__menu {
+    width: 240px;
+  }
+
+  .logo-text {
+    font-size: 15px;
+  }
+
+  .logo-icon {
+    font-size: 20px;
+  }
+
+  .user__name {
+    max-width: 70px;
+    font-size: 11px;
+  }
+
+  .user__role {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+
+  .navbar__item {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .dropdown__item {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
 }
 
-.navbar__item {
-  animation: slideIn 0.3s ease;
-  animation-fill-mode: both;
-}
+/* 480px - Celular */
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 8px;
+  }
 
-.navbar__item:nth-child(1) { animation-delay: 0.1s; }
-.navbar__item:nth-child(2) { animation-delay: 0.2s; }
-.navbar__item:nth-child(3) { animation-delay: 0.3s; }
-.navbar__item:nth-child(4) { animation-delay: 0.4s; }
-.navbar__item:nth-child(5) { animation-delay: 0.5s; }
-.navbar__item:nth-child(6) { animation-delay: 0.6s; }
-.navbar__item:nth-child(7) { animation-delay: 0.7s; }
+  .navbar__menu {
+    width: 220px;
+  }
 
-/* =============================================
-   INDICADOR DE NOTIFICAÇÃO
-   ============================================= */
+  .logo-text {
+    font-size: 14px;
+  }
 
-.notification-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  background: linear-gradient(135deg, #f56565, #e53e3e);
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
+  .logo-icon {
+    font-size: 18px;
+  }
 
-/* =============================================
-   TOOLTIPS
-   ============================================= */
+  .user__name {
+    max-width: 60px;
+  }
 
-.tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--navbar-dropdown-bg);
-  color: var(--navbar-text);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  transition: var(--transition);
-  pointer-events: none;
-  z-index: 1002;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: var(--navbar-dropdown-shadow);
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: var(--navbar-dropdown-bg);
-}
-
-.navbar__item:hover .tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(-8px);
+  .navbar__item {
+    padding: 8px;
+  }
 }
 
 /* =============================================
-   ESTILOS ESPECÍFICOS PARA ADMIN_ESTOQUE
+   UTILITÁRIOS
    ============================================= */
-
 .navbar__item.admin-estoque-item {
   background: linear-gradient(135deg, rgba(246, 173, 85, 0.2), rgba(237, 137, 54, 0.1));
   border: 1px solid rgba(246, 173, 85, 0.3);
 }
 
-.navbar__item.admin-estoque-item.active {
-  background: linear-gradient(135deg, rgba(246, 173, 85, 0.3), rgba(237, 137, 54, 0.2));
-  border-color: #ed8936;
-  box-shadow: 0 2px 10px rgba(237, 137, 54, 0.2);
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  background: #f56565;
+  border-radius: 50%;
 }
 
-.navbar__item.admin-estoque-item.active::before {
-  background: linear-gradient(90deg, #f6ad55, #ed8936);
-}
-
-/* =============================================
-   SCROLLBAR PERSONALIZADA PARA DROPDOWNS
-   ============================================= */
-
+/* Scrollbar */
 .dropdown__menu::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .dropdown__menu::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
 }
 
 .dropdown__menu::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-}
-
-.dropdown__menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* =============================================
-   ESTADO ATIVO MELHORADO
-   ============================================= */
-
-.navbar__item.active .navbar__icon {
-  animation: bounce 0.5s ease;
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-}
-
-/* =============================================
-   BADGE PARA ITENS IMPORTANTES
-   ============================================= */
-
-.important-badge {
-  display: inline-block;
-  background: linear-gradient(135deg, #ed8936, #dd6b20);
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 10px;
-  margin-left: 8px;
-  vertical-align: middle;
-}
-
-/* =============================================
-   BOTÃO DE MENU MOBILE (OCULTO POR DEFAULT)
-   ============================================= */
-
-.mobile-menu-btn {
-  display: none;
-  background: none;
-  border: none;
-  color: var(--navbar-text);
-  font-size: 24px;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: var(--transition);
-}
-
-.mobile-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-@media (max-width: 1024px) {
-  .mobile-menu-btn {
-    display: block;
-  }
-}
-
-/* =============================================
-   LOADING STATE PARA MENU
-   ============================================= */
-
-.navbar__item.loading {
-  position: relative;
-  overflow: hidden;
-}
-
-.navbar__item.loading::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-  0% {
-    left: -100%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-/* Navbar.css - CORREÇÕES PARA DROPDOWN */
-.navbar {
-  position: relative;
-  z-index: 1000;
-}
-
-.dropdown {
-  position: relative;
-}
-
-.dropdown__menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 250px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  margin-top: 5px; /* ✅ REDUZIDO para diminuir o gap */
-  padding: 8px 0;
-  z-index: 1001;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  animation: slideDown 0.2s ease;
-}
-
-/* ✅ PONTE INVISÍVEL para eliminar o gap */
-.dropdown__bridge {
-  position: absolute;
-  top: -10px; /* ✅ Cobre o espaço entre botão e menu */
-  left: 0;
-  width: 100%;
-  height: 15px;
-  background: transparent;
-  z-index: 1002;
-}
-
-.dropdown__menu.closing {
-  opacity: 0;
-  transform: translateY(-10px);
-  pointer-events: none;
-}
-
-/* ✅ ANIMAÇÃO SUAVE */
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ✅ ITENS DO DROPDOWN */
-.dropdown__item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 10px 16px;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 14px;
-  color: #333;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.dropdown__item:hover {
-  background-color: #f5f5f5;
-}
-
-.dropdown__icon {
-  margin-right: 10px;
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
-}
-
-.dropdown__item-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.dropdown__label {
-  font-weight: 500;
-}
-
-.dropdown__description {
-  font-size: 12px;
-  color: #666;
-  margin-top: 2px;
-}
-
-/* ✅ ITEM DESTACADO */
-.dropdown__item.highlight {
-  background-color: #f0f7ff;
-  border-left: 3px solid #007bff;
-}
-
-.dropdown__item.highlight:hover {
-  background-color: #e6f0ff;
-}
-
-/* ✅ DIVISOR */
-.dropdown__divider {
-  height: 1px;
-  background-color: #e0e0e0;
-  margin: 8px 0;
-}
-
-/* ✅ ITEM DE ADMIN */
-.dropdown__item.admin-item {
-  color: #007bff;
-  border-left: 3px solid #007bff;
-}
-
-/* ✅ SETA DO DROPDOWN */
-.navbar__label::after {
-  content: ' ▾';
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.dropdown.active .navbar__label::after {
-  content: ' ▴';
-  opacity: 1;
-}
-
-/* ✅ ESTADO ATIVO */
-.navbar__item.active {
-  background-color: rgba(0, 123, 255, 0.1);
-  color: #007bff;
-  border-bottom: 2px solid #007bff;
-}
-
-.dropdown.active {
-  background-color: rgba(0, 123, 255, 0.1);
-}
-
-/* ✅ RESPONSIVO */
-@media (max-width: 768px) {
-  .navbar__menu {
-    flex-wrap: wrap;
-  }
-  
-  .dropdown__menu {
-    position: fixed;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 300px;
-  }
+  border-radius: 3px;
 }
