@@ -3,16 +3,22 @@ name: Docker Image CI
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  build-backend:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+    - name: Build the Backend Docker image
+      run: |
+        cd backend
+        docker build . --file Dockerfile -t primestock-backend:latest
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build the Frontend Docker image
+      run: |
+        cd frontend
+        docker build . --file Dockerfile -t primestock-frontend:latest
