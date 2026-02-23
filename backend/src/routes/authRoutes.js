@@ -57,15 +57,11 @@ router.post('/login', async (req, res) => {
     console.log('✅ Login válido, gerando token...');
 
     // JWT DEFINITIVO
-    const token = jwt.sign(
-      { 
-        id: usuario.id, 
-        email: usuario.email, 
-        perfil: usuario.perfil 
-      },
-      "controle_estoque_ti_secret_key_2024_definitivo",
-      { expiresIn: "30d" }
-    );
+ const token = jwt.sign(
+  { id: usuario.id, email: usuario.email, perfil: usuario.perfil },
+  process.env.JWT_SECRET,
+  { expiresIn: process.env.JWT_EXPIRES_IN || "30d" }
+);
 
     console.log('🎉 Login realizado com sucesso!');
 

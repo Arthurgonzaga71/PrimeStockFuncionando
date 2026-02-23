@@ -15,7 +15,7 @@ const auth = async (req, res, next) => {
     }
 
     // VERIFICAR E DECODIFICAR TOKEN
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     
     // BUSCAR USUÁRIO COM PERMISSÕES DO BANCO

@@ -1,20 +1,14 @@
-# Usa imagem oficial Node.js
-FROM node:20-alpine
+FROM node:18
 
-# Diretório de trabalho no container
 WORKDIR /app
 
-# Copia package.json e package-lock.json
-COPY package*.json ./
-
-# Instala dependências
-RUN npm install --production
-
-# Copia todo o backend pro container
+# Copiar TUDO (incluindo node_modules)
 COPY . .
 
-# Expõe a porta que o Node vai rodar
+# Listar o conteúdo para debug
+RUN echo "=== CONTEÚDO DO /APP ===" && ls -la && \
+    echo "=== NODE_MODULES ===" && ls -la node_modules || echo "node_modules vazio"
+
 EXPOSE 4000
 
-# Comando para rodar o servidor
 CMD ["node", "server.js"]

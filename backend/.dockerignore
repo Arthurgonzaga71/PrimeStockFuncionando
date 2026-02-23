@@ -1,0 +1,62 @@
+# backend/.dockerignore
+
+# DependÃªncias
+# node_modules 
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Ambiente
+.env
+.env.local
+.env.production
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Testes
+coverage
+.nyc_output
+
+# Build
+dist
+build
+
+# Arquivos temporários
+tmp
+temp
+*.tmp
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Backups
+backups/*
+!backups/.gitkeep
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Exports
+exports/*
+!exports/.gitkeep
+
+# Documentação
+README.md
+docs

@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // ⚡ URL fixa do backend
-const API_BASE_URL = "http://192.168.200.133:4000";
+const API_BASE_URL = "http://localhost:4000";  // ⚡ Remove o /api daqui
 
 
 console.log('🎯 [API] Inicializando conexão com:', API_BASE_URL);

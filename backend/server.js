@@ -73,7 +73,9 @@ const corsOptions = {
         'http://localhost:3000',
         'http://192.168.200.133:3000',
         'http://192.168.200.133:4001',
-        'http://192.168.205.137:4001,'
+        'http://192.168.205.137:4001,',
+        'http://192.168.200.132:4001'
+        
 
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -118,7 +120,7 @@ app.use((req, res, next) => {
       authorization: req.headers.authorization ? 'Token presente' : 'Sem token',
       'content-type': req.headers['content-type'],
       origin: req.headers.origin
-    });
+    } );
   }
   
   next();
@@ -656,7 +658,7 @@ const startServer = async () => {
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 BACKEND RODANDO NA PORTA ${PORT}`);
       console.log(`📍 Local: http://localhost:${PORT}`);
-      console.log(`🌐 Rede: http://192.168.200.133:${PORT}`);
+      console.log(`🌐 Rede: http://192.168.200.132:${PORT}`);
       console.log(`🔐 Login: POST http://localhost:${PORT}/api/auth/login`);
       console.log(`📊 Dashboard: GET http://localhost:${PORT}/api/dashboard`);
       console.log(`🔧 Manutenções: GET http://localhost:${PORT}/api/manutencoes`);

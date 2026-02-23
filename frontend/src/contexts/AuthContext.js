@@ -130,6 +130,8 @@ export const AuthProvider = ({ children }) => {
       console.log('👤 Perfil:', usuarioAtualizado.perfil);
       console.log('📋 Permissões:', usuarioAtualizado.permissoes);
       console.log('🎯 Resumo:', usuarioAtualizado.permissoesResumo);
+          console.log('🔑 TOKEN RECEBIDO DO BACKEND:', token);
+      console.log('🔑 TAMANHO DO TOKEN:', token.length);
 
       setUser(usuarioAtualizado);
       

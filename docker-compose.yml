@@ -1,0 +1,65 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: estoque-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: controle_estoque_ti
+      MYSQL_ROOT_PASSWORD: ""
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - estoque-network
+    command: 
+      - --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 30
+      interval: 5s
+
+  backend:
+    build: ./backend
+    container_name: estoque-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: mysql
+      NODE_ENV: development
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/exports:/app/exports
+      - ./backend/backups:/app/backups
+    networks:
+      - estoque-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: estoque-frontend
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      REACT_APP_API_URL: "http://localhost:4000/api"  # Formato corrigido
+      PORT: "4001"
+      WDS_SOCKET_PORT: "4001"
+    networks:
+      - estoque-network
+    depends_on:
+      - backend
+
+networks:
+  estoque-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

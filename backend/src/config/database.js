@@ -1,15 +1,18 @@
 const { Sequelize } = require('sequelize');
 
-// 🔥 CONEXÃO DIRETA - SEM .env aqui
+// 🔥 DETECÇÃO AUTOMÁTICA DE AMBIENTE
+const isDocker = process.env.DB_HOST === 'mysql';
+
+// Configuração do banco
 const sequelize = new Sequelize(
-  'controle_estoque_ti',  // Nome do banco DIRETO
-  'root',                 // Usuário DIRETO  
-  '',                     // Senha VAZIA diretamente
+  process.env.DB_NAME || 'controle_estoque_ti',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASSWORD || '',
   {
-    host: '127.0.0.1',    // Host DIRETO
+    host: process.env.DB_HOST || (isDocker ? 'mysql' : '127.0.0.1'),
     dialect: 'mysql',
     logging: false,
-    port: 3306,
+    port: process.env.DB_PORT || 3306,
     timezone: '-03:00'
   }
 );
@@ -19,17 +22,13 @@ const testConnection = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ CONEXÃO COM BANCO DE DADOS ESTABELECIDA!');
-    console.log('📊 Banco: controle_estoque_ti');
-    console.log('🎯 Host: 127.0.0.1:3306');
-    console.log('👤 Usuário: root');
-    console.log('🔐 Senha: [VAZIA]');
+    console.log('📊 Banco:', process.env.DB_NAME || 'controle_estoque_ti');
+    console.log('🎯 Host:', sequelize.config.host);
+    console.log('👤 Usuário:', sequelize.config.username);
     return true;
   } catch (error) {
     console.error('❌ ERRO AO CONECTAR NO BANCO:', error.message);
-    console.log('🔧 Dica: Verifique se:');
-    console.log('   - MySQL está rodando');
-    console.log('   - Banco "controle_estoque_ti" existe');
-    console.log('   - Usuário "root" tem acesso sem senha');
+    console.log('🔧 Dica: Verifique se o MySQL está rodando em:', sequelize.config.host);
     return false;
   }
 };
